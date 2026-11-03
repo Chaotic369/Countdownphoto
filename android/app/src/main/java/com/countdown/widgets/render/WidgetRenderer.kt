@@ -23,7 +23,7 @@ import kotlin.math.sqrt
 
 /** Draws a widget to a Bitmap that is shown in an ImageView inside RemoteViews. */
 object WidgetRenderer {
-    private const val MAX_PIXELS = 1_400_000L
+    private const val MAX_PIXELS = 600_000L
 
     fun render(ctx: Context, cfg: WidgetConfig?, areaW: Int, areaH: Int): Bitmap {
         val baseW = max(areaW, 48)

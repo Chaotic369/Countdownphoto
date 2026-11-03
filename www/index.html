@@ -1010,14 +1010,14 @@ html:has(body.side-open) { overflow: hidden !important; }
   });
 
   function select(id) { S.sel = id; renderWidgets(); renderPanel(); }
-  var sysWall;
+  var sysWall, sysBusy = false;
     function loadSysWall() {
-      if (!native || sysWall !== undefined) return;
-      sysWall = false;
+      if (!native || sysBusy) return;
+      sysBusy = true;
       try {
-        var P = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.WidgetBridge;
-        if (!P || !P.getWallpaper) return;
-        P.getWallpaper().then(function (r) {
+        var P = window.Capacitor && ((Capacitor.Plugins && Capacitor.Plugins.WidgetBridge) || (Capacitor.registerPlugin && Capacitor.registerPlugin('WidgetBridge')));
+        if (!P || !P.getWallpaper) { sysBusy = false; return; }
+        P.getWallpaper().finally(function () { sysBusy = false; }).then(function (r) {
           if (r && r.data) { sysWall = r.data; applyWall(); }
         }).catch(function () { });
       } catch (err) { }
@@ -1039,7 +1039,9 @@ html:has(body.side-open) { overflow: hidden !important; }
         });
         if (S.wall === 'phone') loadSysWall();
   }
-  function setUI(u) {
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && S.wall === 'phone') loadSysWall(); });
+    window.addEventListener('focus', function () { if (S.wall === 'phone') loadSysWall(); });
+    function setUI(u) {
     document.documentElement.dataset.ui = u;
     try { localStorage.setItem('ws-ui', u); } catch (err) { }
     document.querySelectorAll('.th').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.ui === u)); });

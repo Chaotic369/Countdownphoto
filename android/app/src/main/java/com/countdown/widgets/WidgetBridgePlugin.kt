@@ -1,6 +1,11 @@
 package com.countdown.widgets
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.Settings
 import android.app.WallpaperManager
 import android.appwidget.AppWidgetManager
 import android.graphics.Bitmap
@@ -97,6 +102,25 @@ class WidgetBridgePlugin : Plugin() {
 
     @PluginMethod
         fun getWallpaper(call: PluginCall) {
+                    if (Build.VERSION.SDK_INT >= 30) {
+                        if (Environment.isExternalStorageManager()) {
+                            readWallpaper(call)
+                        } else {
+                            try {
+                                val i = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                    Uri.parse("package:" + context.packageName))
+                                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(i)
+                            } catch (e: Throwable) {
+                            }
+                            call.reject("needs all files access")
+                        }
+                    } else {
+                        legacyWallpaper(call)
+                    }
+                }
+
+                private fun legacyWallpaper(call: PluginCall) {
             if (getPermissionState("wall") != PermissionState.GRANTED) {
                 requestPermissionForAlias("wall", call, "wallPerm")
             } else {
@@ -114,7 +138,7 @@ class WidgetBridgePlugin : Plugin() {
             try {
                 val wm = WallpaperManager.getInstance(context)
                 val d = try { wm.drawable } catch (e: Throwable) {
-                    try { wm.builtInDrawable } catch (e2: Throwable) { null }
+                    null
                 }
                 if (d == null) { call.reject("no wallpaper"); return }
                 var bmp: Bitmap = if (d is BitmapDrawable && d.bitmap != null) d.bitmap else {
