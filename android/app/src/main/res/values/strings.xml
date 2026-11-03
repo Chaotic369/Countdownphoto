@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Countdown</string>
+    <string name="widget_text_name">Text</string>
+    <string name="widget_photo_name">Photos</string>
+    <string name="widget_countdown_name">Countdown</string>
+    <string name="widget_text_desc">A line of text with your own font, colors and card.</string>
+    <string name="widget_photo_desc">A photo slideshow. Tap left or right to change photos, tap the center for settings.</string>
+    <string name="widget_countdown_desc">Counts down to a date and time with digital digits.</string>
+</resources>

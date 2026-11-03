@@ -1,0 +1,12 @@
+{
+  "appId": "com.countdown.widgets",
+  "appName": "Countdown",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#f1ebdc"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

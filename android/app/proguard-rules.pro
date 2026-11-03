@@ -1,0 +1,4 @@
+-keep class com.getcapacitor.** { *; }
+-keep class com.countdown.widgets.** { *; }
+-keepattributes *Annotation*
+-keepattributes SourceFile,LineNumberTable
