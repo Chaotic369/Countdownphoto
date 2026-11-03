@@ -246,10 +246,18 @@ object WidgetRenderer {
         val opacity = cfg.int("opacity", 100) / 100f
 
         val outer = c.saveLayerAlpha(0f, 0f, aw.toFloat(), ah.toFloat(), (opacity * 255).roundToInt())
-        val bgP = Paint(Paint.ANTI_ALIAS_FLAG)
-        bgP.color = if (pad > 0f) col(cfg.str("bg", "#ffffff")) else Color.argb(64, 0, 0, 0)
-        if (shadow) bgP.setShadowLayer(12f * d, 0f, 6f * d, Color.argb(89, 0, 0, 0))
-        c.drawRoundRect(rect, rad, rad, bgP)
+        if (pad > 0f || shadow) {
+                    val bgP = Paint(Paint.ANTI_ALIAS_FLAG)
+                    bgP.color = if (pad > 0f) col(cfg.str("bg", "#ffffff")) else Color.BLACK
+                    if (shadow) bgP.setShadowLayer(12f * d, 0f, 6f * d, Color.argb(89, 0, 0, 0))
+                    c.drawRoundRect(rect, rad, rad, bgP)
+                    if (pad <= 0f) {
+                        // keep only the shadow, no black fill behind the photo
+                        val clr = Paint(Paint.ANTI_ALIAS_FLAG)
+                        clr.xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+                        c.drawRoundRect(rect, rad, rad, clr)
+                    }
+                }
 
         val photos = cfg.photos
         val idx = if (photos.isEmpty()) 0 else cfg.int("idx", 0).coerceIn(0, photos.size - 1)

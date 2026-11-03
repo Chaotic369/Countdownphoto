@@ -4,7 +4,11 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.BroadcastReceiver
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.os.PowerManager
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -28,23 +32,55 @@ object Ticker {
         cfg.bool("auto", true) && !cfg.bool("paused") && cfg.photos.size > 1 &&
             now - cfg.long("last", 0L) >= cfg.int("interval", 5) * 1000L - 1500L
 
-    fun schedule(ctx: Context) {
-        val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val now = System.currentTimeMillis()
-        var next = Long.MAX_VALUE
+    private var screenRx: BroadcastReceiver? = null
+
+        /** Re-arms the 1 s chain as soon as the screen turns on. */
+        private fun watchScreen(ctx: Context) {
+            if (screenRx != null) return
+            try {
+                val r = object : BroadcastReceiver() {
+                    override fun onReceive(c: Context, i: Intent) { tick(c) }
+                }
+                ctx.applicationContext.registerReceiver(r, IntentFilter(Intent.ACTION_SCREEN_ON))
+                screenRx = r
+            } catch (e: Throwable) {
+            }
+        }
+
+        fun schedule(ctx: Context) {
+            watchScreen(ctx)
+            val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val now = System.currentTimeMillis()
+            val awake = try { (ctx.getSystemService(Context.POWER_SERVICE) as PowerManager).isInteractive } catch (e: Throwable) { true }
+            val minGap = if (awake) 1_000L else 60_000L
+            var next = Long.MAX_VALUE
         for (id in WidgetActions.allIds(ctx)) {
             val cfg = WidgetStore.forAppWidget(ctx, id) ?: continue
             when (cfg.type) {
-                "count" -> next = minOf(next, (now / 60_000L + 1) * 60_000L)
+                "count" -> next = minOf(next,
+                                    if (awake && cfg.unit("seconds")) maxOf((now / 1_000L + 1) * 1_000L, now + 400L)
+                                    else (now / 60_000L + 1) * 60_000L)
                 "photo" -> if (cfg.bool("auto", true) && !cfg.bool("paused") && cfg.photos.size > 1) {
-                    next = minOf(next, maxOf(cfg.long("last", 0L) + cfg.int("interval", 5) * 1000L, now + 15_000L))
+                    next = minOf(next, maxOf(cfg.long("last", 0L) + cfg.int("interval", 5) * 1000L, now + minGap))
                 }
             }
         }
         val pi = PendingIntent.getBroadcast(ctx, 0,
             Intent(ctx, BootReceiver::class.java).setAction(ACTION),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        if (next == Long.MAX_VALUE) am.cancel(pi) else am.setAndAllowWhileIdle(AlarmManager.RTC, next, pi)
+        if (next == Long.MAX_VALUE) {
+                    am.cancel(pi)
+                } else {
+                    try {
+                        if (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()) {
+                            am.setExactAndAllowWhileIdle(AlarmManager.RTC, next, pi)
+                        } else {
+                            am.setAndAllowWhileIdle(AlarmManager.RTC, next, pi)
+                        }
+                    } catch (e: Throwable) {
+                        am.setAndAllowWhileIdle(AlarmManager.RTC, next, pi)
+                    }
+                }
     }
 
     fun tick(ctx: Context) {

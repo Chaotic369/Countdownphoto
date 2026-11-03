@@ -601,7 +601,7 @@ html:has(body.side-open) { overflow: hidden !important; }
     var s = el.style; el.classList.add('wph');
     s.width = w.width + 'px'; s.height = w.height + 'px'; s.padding = w.pad + 'px';
     s.borderRadius = w.radius + 'px'; s.opacity = w.opacity / 100;
-    s.background = w.pad > 0 ? w.bg : 'transparent';
+    s.background = w.pad > 0 ? w.bg : 'rgba(0, 0, 0, 0.25)';
     s.boxShadow = w.shadow ? '0 10px 30px rgba(0, 0, 0, 0.35)' : 'none';
     s.border = 'none'; s.outline = 'none';
   }
@@ -632,7 +632,7 @@ html:has(body.side-open) { overflow: hidden !important; }
       Promise.all(files.map(function (f) {
         return readB64(f).then(function (b) { return WB.savePhoto(w.id, b, f.name); });
       })).then(function (res) {
-        res.forEach(function (r) { if (r) w.photos.push({ url: r.url, path: r.path, name: r.name }); });
+        res.forEach(function (r) { if (r) w.photos.push({ url: r.url || ((window.Capacitor && Capacitor.convertFileSrc) ? Capacitor.convertFileSrc(r.path) : 'file://' + r.path), path: r.path, name: r.name || '' }); });
         w.last = Date.now(); renderWidgets(); renderPanel();
       }).catch(function () { });
       return;
@@ -714,7 +714,7 @@ html:has(body.side-open) { overflow: hidden !important; }
       var el = document.createElement('div');
       el.className = 'w';
       el.dataset.id = w.id; el.dataset.type = w.type;
-      if (w.type === 'photo') { photoBox(el, w); fillPhoto(el, w, false); host.appendChild(el); return; }
+      if (w.type === 'photo') { photoBox(el, w); el.style.background = w.pad > 0 ? w.bg : 'transparent'; fillPhoto(el, w, false); host.appendChild(el); return; }
       box(el, w);
       if (w.type === 'text') {
         var t = document.createElement('div'); t.className = 'tx'; t.textContent = w.text || ' ';
@@ -1017,7 +1017,6 @@ html:has(body.side-open) { overflow: hidden !important; }
   function select(id) { S.sel = id; renderWidgets(); renderPanel(); }
   function applyWall() {
     $('#stage').dataset.wall = S.wall;
-        try { localStorage.setItem('ws-wall', S.wall); } catch (err) { }
     document.querySelectorAll('[data-wall].chip').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.wall === S.wall)); });
   }
   function setUI(u) {
@@ -1142,10 +1141,7 @@ html:has(body.side-open) { overflow: hidden !important; }
     S.tab = 'content';
     if (ctx.mode === 'config') startDone();
   }
-  function start() {
-      try { var w0 = localStorage.getItem('ws-wall'); if (w0 && /^(phone|moss|check)$/.test(w0)) S.wall = w0; } catch (err) { }
-      setUI(u0); applyWall(); renderWidgets(); renderPanel();
-    }
+  function start() { setUI(u0); applyWall(); renderWidgets(); renderPanel(); }
   if (native) { WB.init().then(function (res) { applyNative(res); start(); }).catch(function () { start(); }); }
   else { start(); }
 
@@ -1154,23 +1150,20 @@ html:has(body.side-open) { overflow: hidden !important; }
     if (c) c.textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
   }
   tickClock();
-  function tick() {
-      tickClock();
+  setInterval(function () {
+    tickClock();
     document.querySelectorAll('.w[data-type="photo"]').forEach(function (el) {
       var pw = S.w.filter(function (x) { return x.id === Number(el.dataset.id); })[0];
       if (pw && pw.auto && !pw.paused && pw.photos.length > 1 && !$('.pv') && !$('.pm') && Date.now() - pw.last >= pw.interval * 1000) {
-        if (photoStep(pw, 1)) fillPhoto(el, pw, true); else pw.last = Date.now();
+        if (photoStep(pw, 1)) { fillPhoto(el, pw, true); persist(); } else pw.last = Date.now();
       }
     });
     document.querySelectorAll('.w[data-type="count"]').forEach(function (el) {
       var w = S.w.filter(function (x) { return x.id === Number(el.dataset.id); })[0];
       if (w) fill(el, w);
     });
-  }
-    function loop() { try { tick(); } catch (err) { } setTimeout(loop, 1000 - (Date.now() % 1000) + 5); }
-    loop();
-    document.addEventListener('visibilitychange', function () { try { tick(); } catch (err) { } });
-  })();
+  }, 1000);
+})();
 </script>
 
 </body>
