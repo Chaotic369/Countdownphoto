@@ -1,0 +1,168 @@
+name: Custom Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: "App name"
+        required: false
+        default: "Widgettext"
+      app_version:
+        description: "App version (for example 1.0.0)"
+        required: false
+        default: "1.0.0"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Locate project folders
+        run: |
+          CFG=$(find . -maxdepth 3 -name capacitor.config.json -not -path '*/node_modules/*' | head -n 1)
+          if [ -n "$CFG" ]; then
+            ROOT=$(dirname "$CFG")
+            echo "HAS_CAP=true" >> "$GITHUB_ENV"
+            echo "PROJECT_DIR=$ROOT" >> "$GITHUB_ENV"
+            echo "ANDROID_DIR=$ROOT/android" >> "$GITHUB_ENV"
+          else
+            echo "HAS_CAP=false" >> "$GITHUB_ENV"
+            echo "PROJECT_DIR=." >> "$GITHUB_ENV"
+            echo "ANDROID_DIR=." >> "$GITHUB_ENV"
+          fi
+
+      - name: Set up Node
+        if: env.HAS_CAP == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install web dependencies and sync Capacitor
+        if: env.HAS_CAP == 'true'
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          npm install
+          npx cap sync android
+
+      - name: Patch app name and version
+        env:
+          APP_NAME: ${{ github.event.inputs.app_name || 'Widgettext' }}
+          APP_VERSION: ${{ github.event.inputs.app_version || '1.0.0' }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          from xml.sax.saxutils import escape
+
+          base = os.environ["ANDROID_DIR"]
+          name = os.environ["APP_NAME"].strip() or "Widgettext"
+          ver = os.environ["APP_VERSION"].strip() or "1.0.0"
+          nums = (re.findall(r"\d+", ver) + ["0", "0", "0"])[:3]
+          code = max(1, int(nums[0]) * 10000 + int(nums[1]) * 100 + int(nums[2]))
+
+          # AndroidManifest.xml: label on the <application> tag
+          mpath = os.path.join(base, "app/src/main/AndroidManifest.xml")
+          with open(mpath, encoding="utf-8") as f:
+              m = f.read()
+          label = escape(name, {'"': "&quot;"})
+          pat = re.compile(r'(<application\b[^>]*?android:label=")[^"]*(")', re.S)
+          if pat.search(m):
+              m = pat.sub(lambda x: x.group(1) + label + x.group(2), m, count=1)
+          else:
+              m = re.sub(r"<application\b", lambda x: '<application android:label="' + label + '"', m, count=1)
+          with open(mpath, "w", encoding="utf-8") as f:
+              f.write(m)
+
+          # strings.xml: the launcher activity label points at @string/app_name
+          spath = os.path.join(base, "app/src/main/res/values/strings.xml")
+          if os.path.exists(spath):
+              with open(spath, encoding="utf-8") as f:
+                  s = f.read()
+              val = escape(name).replace("'", "\\'")
+              s = re.sub(r'(<string name="app_name">)[^<]*(</string>)',
+                         lambda x: x.group(1) + val + x.group(2), s, count=1)
+              with open(spath, "w", encoding="utf-8") as f:
+                  f.write(s)
+
+          # app/build.gradle or app/build.gradle.kts
+          done = False
+          for fn in ("app/build.gradle.kts", "app/build.gradle"):
+              gpath = os.path.join(base, fn)
+              if not os.path.exists(gpath):
+                  continue
+              with open(gpath, encoding="utf-8") as f:
+                  g = f.read()
+              g = re.sub(r'(versionName\s*=?\s*)["\'][^"\']*["\']',
+                         lambda x: x.group(1) + '"' + ver + '"', g, count=1)
+              g = re.sub(r"(versionCode\s*=?\s*)\d+",
+                         lambda x: x.group(1) + str(code), g, count=1)
+              with open(gpath, "w", encoding="utf-8") as f:
+                  f.write(g)
+              print("Patched", gpath)
+              done = True
+              break
+          if not done:
+              raise SystemExit("No app/build.gradle(.kts) found")
+          print("name =", name, "| versionName =", ver, "| versionCode =", code)
+          PY
+
+      - name: Inject launcher icon
+        run: |
+          if [ -f build-icon.png ]; then
+            pip install --quiet pillow
+            python3 - <<'PY'
+          import os
+          from PIL import Image, ImageDraw
+
+          res = os.path.join(os.environ["ANDROID_DIR"], "app/src/main/res")
+          sizes = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
+          src = Image.open("build-icon.png").convert("RGBA")
+          w, h = src.size
+          s = min(w, h)
+          src = src.crop(((w - s) // 2, (h - s) // 2, (w - s) // 2 + s, (h - s) // 2 + s))
+          for dens, px in sizes.items():
+              d = os.path.join(res, "mipmap-" + dens)
+              os.makedirs(d, exist_ok=True)
+              img = src.resize((px, px), Image.LANCZOS)
+              img.save(os.path.join(d, "ic_launcher.png"))
+              mask = Image.new("L", (px, px), 0)
+              ImageDraw.Draw(mask).ellipse((0, 0, px - 1, px - 1), fill=255)
+              rnd = Image.new("RGBA", (px, px), (0, 0, 0, 0))
+              rnd.paste(img, (0, 0), mask)
+              rnd.save(os.path.join(d, "ic_launcher_round.png"))
+          # The adaptive icon in mipmap-anydpi-v26 would override the PNGs on Android 8+, so remove it.
+          for n in ("ic_launcher.xml", "ic_launcher_round.xml"):
+              p = os.path.join(res, "mipmap-anydpi-v26", n)
+              if os.path.exists(p):
+                  os.remove(p)
+          print("Icon injected")
+          PY
+          else
+            echo "build-icon.png not found, keeping the default icon"
+          fi
+
+      - name: Build debug APK
+        working-directory: ${{ env.ANDROID_DIR }}
+        run: gradle assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.app_name || 'Widgettext' }}
+          path: ${{ env.ANDROID_DIR }}/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
