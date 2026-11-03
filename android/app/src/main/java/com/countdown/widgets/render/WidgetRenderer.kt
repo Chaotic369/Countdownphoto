@@ -234,10 +234,10 @@ object WidgetRenderer {
         val wDp = cfg.int("width", 260)
         val hDp = cfg.int("height", 260)
         val shadow = cfg.bool("shadow", true)
-        val margin = if (shadow) 14f * d else 0f
-        val s = min((aw - 2 * margin) / (wDp * d), (ah - 2 * margin) / (hDp * d))
-        val cw = wDp * d * s
-        val chh = hDp * d * s
+        val margin = if (shadow) 6f * d else 0f
+                val s = 1f
+                val cw = aw - 2 * margin
+                val chh = ah - 2 * margin
         val left = (aw - cw) / 2f
         val top = (ah - chh) / 2f
         val rect = RectF(left, top, left + cw, top + chh)
