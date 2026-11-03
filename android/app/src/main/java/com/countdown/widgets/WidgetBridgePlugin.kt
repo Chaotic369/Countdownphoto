@@ -1,6 +1,15 @@
 package com.countdown.widgets
 
+import android.Manifest
+import android.app.WallpaperManager
 import android.appwidget.AppWidgetManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import java.io.ByteArrayOutputStream
+import com.getcapacitor.PermissionState
+import com.getcapacitor.annotation.Permission
+import com.getcapacitor.annotation.PermissionCallback
 import android.content.ComponentName
 import android.util.Base64
 import com.countdown.widgets.config.WidgetConfigActivity
@@ -15,7 +24,10 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 
-@CapacitorPlugin(name = "WidgetBridge")
+@CapacitorPlugin(
+    name = "WidgetBridge",
+    permissions = [Permission(strings = [Manifest.permission.READ_EXTERNAL_STORAGE], alias = "wall")]
+)
 class WidgetBridgePlugin : Plugin() {
 
     @PluginMethod
@@ -84,7 +96,53 @@ class WidgetBridgePlugin : Plugin() {
     }
 
     @PluginMethod
-    fun deletePhoto(call: PluginCall) {
+        fun getWallpaper(call: PluginCall) {
+            if (getPermissionState("wall") != PermissionState.GRANTED) {
+                requestPermissionForAlias("wall", call, "wallPerm")
+            } else {
+                readWallpaper(call)
+            }
+        }
+
+        @PermissionCallback
+        private fun wallPerm(call: PluginCall) {
+            // Android 13+ may auto-deny; readWallpaper falls back to the built-in wallpaper.
+            readWallpaper(call)
+        }
+
+        private fun readWallpaper(call: PluginCall) {
+            try {
+                val wm = WallpaperManager.getInstance(context)
+                val d = try { wm.drawable } catch (e: Throwable) {
+                    try { wm.builtInDrawable } catch (e2: Throwable) { null }
+                }
+                if (d == null) { call.reject("no wallpaper"); return }
+                var bmp: Bitmap = if (d is BitmapDrawable && d.bitmap != null) d.bitmap else {
+                    val w = if (d.intrinsicWidth > 0) d.intrinsicWidth else 720
+                    val h = if (d.intrinsicHeight > 0) d.intrinsicHeight else 1280
+                    val b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                    val c = Canvas(b)
+                    d.setBounds(0, 0, w, h)
+                    d.draw(c)
+                    b
+                }
+                val longest = maxOf(bmp.width, bmp.height)
+                if (longest > 900) {
+                    val k = 900f / longest
+                    bmp = Bitmap.createScaledBitmap(bmp, (bmp.width * k).toInt(), (bmp.height * k).toInt(), true)
+                }
+                val out = ByteArrayOutputStream()
+                bmp.compress(Bitmap.CompressFormat.JPEG, 80, out)
+                val r = JSObject()
+                r.put("data", "data:image/jpeg;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP))
+                call.resolve(r)
+            } catch (e: Throwable) {
+                call.reject("wallpaper failed")
+            }
+        }
+
+        @PluginMethod
+        fun deletePhoto(call: PluginCall) {
         PhotoStorage.delete(context, call.getString("path") ?: "")
         call.resolve()
     }

@@ -1015,9 +1015,34 @@ html:has(body.side-open) { overflow: hidden !important; }
   });
 
   function select(id) { S.sel = id; renderWidgets(); renderPanel(); }
-  function applyWall() {
+  var sysWall;
+    function loadSysWall() {
+      if (!native || sysWall !== undefined) return;
+      sysWall = false;
+      try {
+        var P = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.WidgetBridge;
+        if (!P || !P.getWallpaper) return;
+        P.getWallpaper().then(function (r) {
+          if (r && r.data) { sysWall = r.data; applyWall(); }
+        }).catch(function () { });
+      } catch (err) { }
+    }
+    function applyWall() {
     $('#stage').dataset.wall = S.wall;
     document.querySelectorAll('[data-wall].chip').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.wall === S.wall)); });
+        var st = $('#stage');
+        if (S.wall === 'phone' && sysWall) {
+          st.style.backgroundImage = 'url("' + sysWall + '")';
+          st.style.backgroundSize = 'cover';
+          st.style.backgroundPosition = 'center';
+        } else {
+          st.style.backgroundImage = '';
+        }
+        document.querySelectorAll('.wp-phone').forEach(function (i) {
+          i.style.backgroundImage = sysWall ? 'url("' + sysWall + '")' : '';
+          i.style.backgroundSize = 'cover';
+        });
+        if (S.wall === 'phone') loadSysWall();
   }
   function setUI(u) {
     document.documentElement.dataset.ui = u;
