@@ -7,8 +7,16 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
         <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
-        <application
-            android:allowBackup="true"
+        <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+            <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+            <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+            <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+            <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+            <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+            <application
+                android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
@@ -94,8 +102,17 @@
             </intent-filter>
         </receiver>
 
-        <provider
-            android:name="androidx.core.content.FileProvider"
+        <service
+                    android:name=".work.SecondsService"
+                    android:exported="false"
+                    android:foregroundServiceType="specialUse">
+                    <property
+                        android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                        android:value="Refreshes countdown widgets every second while the screen is on" />
+                </service>
+
+                <provider
+                    android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">

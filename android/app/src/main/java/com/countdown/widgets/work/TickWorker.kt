@@ -9,6 +9,14 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.PowerManager
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.pm.ServiceInfo
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.IBinder
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -49,7 +57,15 @@ object Ticker {
 
         fun schedule(ctx: Context) {
             watchScreen(ctx)
-            val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                    try {
+                        if (!SecondsService.running && WidgetActions.allIds(ctx).any { id ->
+                                WidgetStore.forAppWidget(ctx, id)?.let { it.type == "count" && it.unit("seconds") } == true }) {
+                            val si = Intent(ctx, SecondsService::class.java)
+                            if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(si) else ctx.startService(si)
+                        }
+                    } catch (e: Throwable) {
+                    }
+                    val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             val now = System.currentTimeMillis()
             val awake = try { (ctx.getSystemService(Context.POWER_SERVICE) as PowerManager).isInteractive } catch (e: Throwable) { true }
             val minGap = if (awake) 1_000L else 60_000L
@@ -58,7 +74,7 @@ object Ticker {
             val cfg = WidgetStore.forAppWidget(ctx, id) ?: continue
             when (cfg.type) {
                 "count" -> next = minOf(next,
-                                    if (awake && cfg.unit("seconds")) maxOf((now / 1_000L + 1) * 1_000L, now + 400L)
+                                    if (awake && cfg.unit("seconds") && !SecondsService.running) maxOf((now / 1_000L + 1) * 1_000L, now + 400L)
                                     else (now / 60_000L + 1) * 60_000L)
                 "photo" -> if (cfg.bool("auto", true) && !cfg.bool("paused") && cfg.photos.size > 1) {
                     next = minOf(next, maxOf(cfg.long("last", 0L) + cfg.int("interval", 5) * 1000L, now + minGap))
@@ -106,6 +122,98 @@ object Ticker {
     fun ensureWork(ctx: Context) {
         val req = PeriodicWorkRequestBuilder<TickWorker>(15, TimeUnit.MINUTES).build()
         WorkManager.getInstance(ctx).enqueueUniquePeriodicWork("widget_tick", ExistingPeriodicWorkPolicy.KEEP, req)
+    }
+}
+
+/** Redraws countdown widgets once per second while the screen is on. */
+class SecondsService : Service() {
+    companion object {
+        @Volatile var running = false
+    }
+
+    private var thread: HandlerThread? = null
+    private var h: Handler? = null
+    private var rx: BroadcastReceiver? = null
+    @Volatile private var screenOn = true
+
+    private val loop = object : Runnable {
+        override fun run() {
+            if (!screenOn) return
+            try {
+                val ctx = this@SecondsService
+                val mgr = AppWidgetManager.getInstance(ctx)
+                var any = false
+                for (id in WidgetActions.allIds(ctx)) {
+                    val cfg = WidgetStore.forAppWidget(ctx, id) ?: continue
+                    if (cfg.type == "count" && cfg.unit("seconds")) {
+                        any = true
+                        WidgetActions.update(ctx, mgr, id)
+                    }
+                }
+                if (!any) { stopSelf(); return }
+            } catch (e: Throwable) {
+            }
+            h?.postDelayed(this, 1000L - (System.currentTimeMillis() % 1000L) + 5L)
+        }
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        running = true
+        val t = HandlerThread("seconds-tick")
+        t.start()
+        thread = t
+        h = Handler(t.looper)
+        screenOn = try { (getSystemService(Context.POWER_SERVICE) as PowerManager).isInteractive } catch (e: Throwable) { true }
+        val r = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, i: Intent) {
+                if (i.action == Intent.ACTION_SCREEN_OFF) {
+                    screenOn = false
+                    h?.removeCallbacks(loop)
+                } else if (i.action == Intent.ACTION_SCREEN_ON) {
+                    screenOn = true
+                    h?.removeCallbacks(loop)
+                    h?.post(loop)
+                }
+            }
+        }
+        val f = IntentFilter()
+        f.addAction(Intent.ACTION_SCREEN_ON)
+        f.addAction(Intent.ACTION_SCREEN_OFF)
+        registerReceiver(r, f)
+        rx = r
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        try {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (Build.VERSION.SDK_INT >= 26) {
+                nm.createNotificationChannel(NotificationChannel("seconds", "Live countdown", NotificationManager.IMPORTANCE_MIN))
+            }
+            val n = (if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, "seconds") else Notification.Builder(this))
+                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setContentTitle("Countdown is running")
+                .setOngoing(true)
+                .build()
+            if (Build.VERSION.SDK_INT >= 34) startForeground(7, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            else startForeground(7, n)
+        } catch (e: Throwable) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        h?.removeCallbacks(loop)
+        if (screenOn) h?.post(loop)
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        running = false
+        try { rx?.let { unregisterReceiver(it) } } catch (e: Throwable) { }
+        h?.removeCallbacksAndMessages(null)
+        thread?.quitSafely()
+        super.onDestroy()
     }
 }
 
