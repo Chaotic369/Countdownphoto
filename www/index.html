@@ -345,11 +345,7 @@ html:has(body.side-open) { overflow: hidden !important; }
 .wph { position: relative; overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: pointer; touch-action: manipulation; border: none; outline: none; -webkit-tap-highlight-color: transparent; }
 .wph:focus, .wph:focus-visible { outline: none; }
 .pi { display: block; width: 100%; height: 100%; pointer-events: none; }
-.pi.a-fade { animation: pwf 0.7s ease; }
-.pi.a-slide { animation: pws 0.5s ease; }
-.pi.a-zoom { animation: pwz 0.7s ease; }
-@keyframes pwf { from { opacity: 0; } to { opacity: 1; } }
-@keyframes pws { from { transform: translateX(14%); opacity: 0; } to { transform: none; opacity: 1; } }
+
 @keyframes pwz { from { transform: scale(1.12); opacity: 0; } to { transform: none; opacity: 1; } }
 .pe { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 12px; font-size: 13px; color: rgba(255, 255, 255, 0.85); }
 .pe b { font-weight: 600; font-size: 14px; }
@@ -610,7 +606,7 @@ html:has(body.side-open) { overflow: hidden !important; }
     if (!p) {
       h = '<div class="pe"><b>No photos yet</b><span>Add photos in the editor</span></div>';
     } else {
-      h = '<img class="pi' + (anim && w.trans !== 'none' ? ' a-' + w.trans : '') + '" src="' + p.url + '" alt="" draggable="false" style="object-fit:' + w.fit + ';border-radius:' + r + 'px;filter:brightness(' + w.brightness + '%) grayscale(' + w.gray + '%)">';
+      h = '<img class="pi" src="' + p.url + '" alt="" draggable="false" style="object-fit:' + w.fit + ';border-radius:' + r + 'px;filter:brightness(' + w.brightness + '%) grayscale(' + w.gray + '%)">';
       if (w.paused && w.auto && n > 1) h += '<span class="pp">Paused</span>';
     }
     el.innerHTML = h;
@@ -868,7 +864,6 @@ html:has(body.side-open) { overflow: hidden !important; }
         o += sh('Slideshow');
         o += '<div class="tg">' + chk('auto', 'Auto-change') + chk('shuffle', 'Shuffle') + chk('loop', 'Loop') + '</div>';
         o += rng('interval', 'Interval between photos', 2, 120, 1, 's').replace('<input', '<input' + (w.auto ? '' : ' disabled'));
-        o += opts('trans', 'Transition', [['fade', 'Fade'], ['slide', 'Slide'], ['zoom', 'Zoom'], ['none', 'None']]);
       } else if (S.tab === 'style') {
         o += sh('Size');
         o += rng('width', 'Width', 120, 420, 1, 'px');
