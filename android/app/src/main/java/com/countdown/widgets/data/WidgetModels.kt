@@ -4,6 +4,8 @@ import org.json.JSONObject
 
 data class Photo(val path: String, val name: String)
 
+data class TaskItem(val text: String, val done: Boolean)
+
 /** Thin wrapper over the JSON the editor saves. Field names match www/index.html. */
 class WidgetConfig(val raw: JSONObject) {
     val id: Int get() = raw.optInt("id", 0)
@@ -26,7 +28,16 @@ class WidgetConfig(val raw: JSONObject) {
             }
         }
 
-    companion object {
+    val tasks: List<TaskItem>
+            get() {
+                val a = raw.optJSONArray("items") ?: return emptyList()
+                return (0 until a.length()).map {
+                    val o = a.optJSONObject(it)
+                    TaskItem(o?.optString("t", "") ?: "", o?.optBoolean("d", false) ?: false)
+                }
+            }
+
+        companion object {
         fun parse(s: String): WidgetConfig? = try {
             WidgetConfig(JSONObject(s))
         } catch (e: Exception) {

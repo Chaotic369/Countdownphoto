@@ -13,7 +13,9 @@ import android.graphics.RectF
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.TextUtils
 import com.countdown.widgets.data.PhotoStorage
+import com.countdown.widgets.data.TaskItem
 import com.countdown.widgets.data.WidgetConfig
 import kotlin.math.ceil
 import kotlin.math.max
@@ -44,6 +46,7 @@ object WidgetRenderer {
             "text" -> drawText(ctx, c, cfg, w, h, d)
             "count" -> drawCount(ctx, c, cfg, w, h, d)
             "photo" -> drawPhoto(ctx, c, cfg, w, h, d)
+                        "tasks" -> drawTasks(ctx, c, cfg, w, h, d)
             else -> drawHint(c, w, h, d)
         }
         return bmp
@@ -119,7 +122,84 @@ object WidgetRenderer {
         c.restore()
     }
 
-    /* ---------------- countdown ---------------- */
+    /* ---------------- tasks ---------------- */
+        private fun drawTasks(ctx: Context, c: Canvas, cfg: WidgetConfig, aw: Int, ah: Int, d: Float) {
+            val sz = cfg.int("size", 18) * d
+            val fg = col(cfg.str("color", "#ffffff"))
+            val pad = cfg.int("pad", 18) * d
+            val italic = cfg.bool("italic")
+            val fontName = cfg.str("font", "Instrument Sans")
+            val contentW = max(80, cfg.int("width", 240)) * d
+            val align = cfg.str("align", "left")
+            val hideDone = cfg.bool("hideDone")
+            val strike = cfg.bool("strike", true)
+
+            val txt = TextPaint(Paint.ANTI_ALIAS_FLAG)
+            txt.typeface = FontLoader.get(ctx, fontName, cfg.int("weight", 500), italic)
+            txt.textSize = sz
+            txt.color = fg
+            txt.letterSpacing = (cfg.dbl("spacing", 0.0) * d / sz).toFloat()
+            val head = TextPaint(txt)
+            head.typeface = FontLoader.get(ctx, fontName, 700, italic)
+
+            val rows: List<TaskItem> = cfg.tasks.filter { !(hideDone && it.done) }
+            val title = if (cfg.bool("showTitle", true)) cfg.str("label") else ""
+            val rowH = sz * 1.55f
+            val titleH = if (title.isEmpty()) 0f else rowH * 1.15f
+            val cw = contentW + 2 * pad
+            val ch = titleH + rowH * max(rows.size, 1) + 2 * pad
+            val s = min(1f, min(aw / cw, ah / ch))
+            fun off(w: Float): Float = when (align) { "center" -> (contentW - w) / 2f; "right" -> contentW - w; else -> 0f }
+            fun base(p: Paint, top: Float, h: Float): Float = top + h / 2f - (p.fontMetrics.ascent + p.fontMetrics.descent) / 2f
+
+            c.save()
+            c.translate((aw - cw * s) / 2f, (ah - ch * s) / 2f)
+            c.scale(s, s)
+            drawCard(c, cw, ch, cfg, d)
+            c.translate(pad, pad)
+
+            if (title.isNotEmpty()) {
+                val tt = TextUtils.ellipsize(title, head, contentW, TextUtils.TruncateAt.END).toString()
+                c.drawText(tt, off(head.measureText(tt)), base(head, 0f, rowH), head)
+            }
+            val box = sz * 0.95f
+            val gap = sz * 0.6f
+            val ring = Paint(Paint.ANTI_ALIAS_FLAG)
+            ring.style = Paint.Style.STROKE
+            ring.strokeWidth = max(1.5f * d, sz * 0.09f)
+            ring.color = fg
+            val fillP = Paint(Paint.ANTI_ALIAS_FLAG)
+            fillP.color = alphaOf(fg, 0.9f)
+            val lineP = Paint(Paint.ANTI_ALIAS_FLAG)
+            lineP.strokeWidth = max(1f * d, sz * 0.07f)
+            lineP.color = alphaOf(fg, 0.5f)
+
+            if (rows.isEmpty()) {
+                txt.color = alphaOf(fg, 0.6f)
+                val msg = "No tasks yet"
+                c.drawText(msg, off(txt.measureText(msg)), base(txt, titleH, rowH), txt)
+            }
+            rows.forEachIndexed { i, task ->
+                val top = titleH + i * rowH
+                val avail = max(10f, contentW - box - gap)
+                txt.color = if (task.done) alphaOf(fg, 0.5f) else fg
+                val line = TextUtils.ellipsize(task.text.ifEmpty { " " }, txt, avail, TextUtils.TruncateAt.END).toString()
+                val tw = txt.measureText(line)
+                val x = off(box + gap + tw)
+                val cy = top + rowH / 2f
+                if (task.done) {
+                    c.drawCircle(x + box / 2f, cy, box / 2f, fillP)
+                } else {
+                    c.drawCircle(x + box / 2f, cy, box / 2f - ring.strokeWidth / 2f, ring)
+                }
+                val tx = x + box + gap
+                c.drawText(line, tx, base(txt, top, rowH), txt)
+                if (task.done && strike) c.drawLine(tx, cy, tx + tw, cy, lineP)
+            }
+            c.restore()
+        }
+
+        /* ---------------- countdown ---------------- */
     private class Item(val text: String, val label: String, val w: Float, val h: Float, val numW: Float)
 
     private fun drawCount(ctx: Context, c: Canvas, cfg: WidgetConfig, aw: Int, ah: Int, d: Float) {

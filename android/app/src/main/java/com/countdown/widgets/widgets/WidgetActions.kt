@@ -23,7 +23,8 @@ object WidgetActions {
     const val ACT_PAUSE = "com.countdown.widgets.action.PAUSE"
 
     private val PROVIDERS = listOf(
-        TextWidgetProvider::class.java, CountdownWidgetProvider::class.java, PhotoWidgetProvider::class.java)
+        TextWidgetProvider::class.java, CountdownWidgetProvider::class.java, PhotoWidgetProvider::class.java,
+                TasksWidgetProvider::class.java)
 
     fun allIds(ctx: Context): List<Int> {
         val m = AppWidgetManager.getInstance(ctx)
@@ -33,6 +34,7 @@ object WidgetActions {
     fun providerFor(type: String): Class<*> = when (type) {
         "photo" -> PhotoWidgetProvider::class.java
         "count" -> CountdownWidgetProvider::class.java
+                "tasks" -> TasksWidgetProvider::class.java
         else -> TextWidgetProvider::class.java
     }
 
@@ -41,6 +43,7 @@ object WidgetActions {
         return when {
             cn.endsWith("PhotoWidgetProvider") -> "photo"
             cn.endsWith("CountdownWidgetProvider") -> "count"
+                        cn.endsWith("TasksWidgetProvider") -> "tasks"
             else -> "text"
         }
     }

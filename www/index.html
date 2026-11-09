@@ -345,6 +345,19 @@ html:has(body.side-open) { overflow: hidden !important; }
 .wph { position: relative; overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: pointer; touch-action: manipulation; border: none; outline: none; -webkit-tap-highlight-color: transparent; }
 .wph:focus, .wph:focus-visible { outline: none; }
 .pi { display: block; width: 100%; height: 100%; pointer-events: none; }
+.tk { display: flex; flex-direction: column; gap: 0.4em; max-width: 100%; }
+.tk-h { font-weight: 700; margin-bottom: 0.25em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-r { display: flex; align-items: center; gap: 0.6em; min-width: 0; }
+.tk-c { flex: none; width: 1.05em; height: 1.05em; border-radius: 50%; border: 2px solid currentColor; background: transparent; color: inherit; padding: 0; }
+.tk-r.dn .tk-c { background: currentColor; }
+.tk-r.dn .tk-t { opacity: 0.5; }
+.tk-r.dn.st .tk-t { text-decoration: line-through; }
+.tk-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-e { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.tk-e .tk-c { width: 22px; height: 22px; color: var(--fg); }
+.tk-e .tk-c.on { background: var(--accent); border-color: var(--accent); }
+.tk-i { flex: 1; min-width: 0; }
+.tk-x { flex: none; width: 34px; height: 34px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; padding: 0; }
 
 @keyframes pwz { from { transform: scale(1.12); opacity: 0; } to { transform: none; opacity: 1; } }
 .pe { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 12px; font-size: 13px; color: rgba(255, 255, 255, 0.85); }
@@ -387,6 +400,7 @@ html:has(body.side-open) { overflow: hidden !important; }
       <button type="button" data-add="text">Aa &nbsp;Text</button>
       <button type="button" data-add="count">88 &nbsp;Countdown</button>
       <button type="button" data-add="photo">Ph &nbsp;Photos</button>
+            <button type="button" data-add="tasks">✓ &nbsp;Tasks</button>
     </div>
     <div class="sd-l" id="side-list"></div>
     <div class="sd-f" id="side-foot"></div>
@@ -473,7 +487,13 @@ html:has(body.side-open) { overflow: hidden !important; }
       bgOn: true, bg: '#0b0b0b', bgOpacity: 55, blur: 10, radius: 22, pad: 20, border: false, borderColor: '#ffb000', appWidgetId: 0 };
   }
 
-  function mkDemoPhoto() {
+  function mkTasks() {
+      return { id: nid++, type: 'tasks', label: 'To-do', showTitle: true,
+        items: [{ t: 'Plan the week', d: false }, { t: 'Drink water', d: true }, { t: 'Call a friend', d: false }],
+        font: 'Instrument Sans', size: 18, weight: 500, italic: false, color: '#ffffff', spacing: 0, align: 'left', width: 240, strike: true, hideDone: false,
+        bgOn: true, bg: '#000000', bgOpacity: 40, blur: 14, radius: 24, pad: 18, border: false, borderColor: '#ffffff', appWidgetId: 0 };
+    }
+    function mkDemoPhoto() {
     var scenes = [['#ff9a5a', '#ffd86b', '#7a3b69'], ['#4a7bd0', '#8fd3ff', '#16305f'], ['#6fbf73', '#d8f5a2', '#1f5a3a'], ['#b06be0', '#ff9acb', '#3a1a6a']];
     var w = mkPhoto();
     w.label = 'Demo photos'; w.interval = 4;
@@ -536,17 +556,18 @@ html:has(body.side-open) { overflow: hidden !important; }
   /* ---------- sidebar ---------- */
   var sideNew = false;
   var ICO_DEL = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  function sideName(x) { return ((x.type === 'text' ? x.text : x.label) || '').trim() || (x.type === 'text' ? 'Text' : x.type === 'photo' ? 'Photos' : 'Countdown'); }
+  function sideName(x) { return ((x.type === 'text' ? x.text : x.label) || '').trim() || (x.type === 'text' ? 'Text' : x.type === 'photo' ? 'Photos' : x.type === 'tasks' ? 'Tasks' : 'Countdown'); }
   function sideSub(x) {
     if (x.type === 'count') { var tt = parseT(x.target); return tt.d + ' ' + MON[tt.m].slice(0, 3) + ' ' + tt.y + ', ' + p2(tt.hh) + ':' + p2(tt.mm); }
-    if (x.type === 'photo') return x.photos.length + ' photo' + (x.photos.length === 1 ? '' : 's') + ' · ' + (x.auto ? x.interval + 's' : 'manual');
+    if (x.type === 'tasks') return (x.items || []).filter(function (i) { return i.d; }).length + ' / ' + (x.items || []).length + ' done';
+        if (x.type === 'photo') return x.photos.length + ' photo' + (x.photos.length === 1 ? '' : 's') + ' · ' + (x.auto ? x.interval + 's' : 'manual');
     return x.font + ' · ' + x.size + 'px';
   }
   function renderSide() {
     var host = $('#side-list'); if (!host) return;
-    var info = { text: ['Text widgets', 'Aa'], count: ['Countdown widgets', '88'], photo: ['Photo widgets', 'Ph'] };
+    var info = { text: ['Text widgets', 'Aa'], count: ['Countdown widgets', '88'], photo: ['Photo widgets', 'Ph'], tasks: ['Task widgets', '✓'] };
     var h = '';
-    ['text', 'count', 'photo'].forEach(function (t) {
+    ['text', 'count', 'photo', 'tasks'].forEach(function (t) {
       var all = S.w.filter(function (x) { return x.type === t; });
       var items = all;
       h += '<div class="sd-g"><span>' + info[t][0] + '</span><b>' + all.length + '</b></div>';
@@ -704,7 +725,21 @@ html:has(body.side-open) { overflow: hidden !important; }
     h += '<div class="cd' + (w.italic && seg ? ' it' : '') + '" style="color:' + w.color + ';font-family:' + fam + ';font-weight:' + w.weight + ';' + (w.italic && !seg ? 'font-style:italic;' : '') + '">' + parts.join(sep) + '</div>';
     el.innerHTML = h;
   }
-  function renderWidgets() {
+  function fillTasks(el, w) {
+      var fam = FONTS[w.font] || FONTS['Instrument Sans'];
+      var jc = w.align === 'center' ? 'center' : w.align === 'right' ? 'flex-end' : 'flex-start';
+      var st = 'font-family:' + fam + ';font-weight:' + w.weight + ';font-size:' + w.size + 'px;color:' + w.color + ';letter-spacing:' + w.spacing + 'px;width:' + w.width + 'px;' + (w.italic ? 'font-style:italic;' : '');
+      var h = '', n = 0;
+      if (w.showTitle && w.label) h += '<div class="tk-h" style="text-align:' + (w.align || 'left') + '">' + esc(w.label) + '</div>';
+      (w.items || []).forEach(function (it, i) {
+        if (w.hideDone && it.d) return;
+        n++;
+        h += '<div class="tk-r' + (it.d ? ' dn' : '') + (w.strike ? ' st' : '') + '" style="justify-content:' + jc + '"><button type="button" class="tk-c" data-tkt="' + i + '" aria-label="Toggle task"></button><span class="tk-t">' + esc(it.t || ' ') + '</span></div>';
+      });
+      if (!n) h += '<div class="tk-r" style="justify-content:' + jc + ';opacity:.6"><span class="tk-t">No tasks yet</span></div>';
+      el.innerHTML = '<div class="tk" style="' + st + '">' + h + '</div>';
+    }
+    function renderWidgets() {
     var host = $('#widgets'); host.textContent = ''; renderSide();
     S.w.filter(function (x) { return x.id === S.sel; }).forEach(function (w) {
       var el = document.createElement('div');
@@ -718,7 +753,7 @@ html:has(body.side-open) { overflow: hidden !important; }
         s.fontFamily = FONTS[w.font] || FONTS['Fraunces']; s.fontSize = w.size + 'px'; s.fontWeight = w.weight;
         s.fontStyle = w.italic ? 'italic' : 'normal'; s.color = w.color; s.textAlign = w.align; s.letterSpacing = w.spacing + 'px';
         el.appendChild(t);
-      } else { fill(el, w); }
+      } else if (w.type === 'tasks') { fillTasks(el, w); } else { fill(el, w); }
       host.appendChild(el);
     });
     persist();
@@ -792,7 +827,7 @@ html:has(body.side-open) { overflow: hidden !important; }
     return out + '</div>';
   }
   function kindsHTML() {
-    var info = { text: ['Text', 'Words only', 'Aa'], count: ['Countdown', 'Live timer, optional title', '88'], photo: ['Photos', 'Slideshow of your pictures', 'Ph'] };
+    var info = { text: ['Text', 'Words only', 'Aa'], count: ['Countdown', 'Live timer, optional title', '88'], photo: ['Photos', 'Slideshow of your pictures', 'Ph'], tasks: ['Tasks', 'Checklist you can tick off', '✓'] };
     return '<div class="kinds" role="group" aria-label="Widget type">' + S.w.map(function (x) {
       return '<button class="kind" data-sel="' + x.id + '" aria-pressed="' + (x.id === S.sel) + '"><span class="ki">' + info[x.type][2] + '</span><span class="kt">' + info[x.type][0] + '</span><span class="ks">' + info[x.type][1] + '</span></button>';
     }).join('') + '</div>';
@@ -891,7 +926,21 @@ html:has(body.side-open) { overflow: hidden !important; }
       return o;
     }
 
-    var h = kindsHTML();
+    function tasksPanel() {
+          var o = sh('Title');
+          o += chk('showTitle', 'Show title');
+          o += '<div class="f"><label for="c-label">Title text</label><input type="text" id="c-label" data-k="label" value="' + esc(w.label) + '"' + (w.showTitle ? '' : ' disabled') + '></div>';
+          o += sh('Tasks');
+          o += '<div class="f"><div class="row"><input type="text" id="tk-new" class="tk-i" placeholder="New task" maxlength="80" autocomplete="off"><button type="button" class="ghost" data-tkadd="1">Add</button></div></div>';
+          (w.items || []).forEach(function (it, i) {
+            o += '<div class="tk-e"><button type="button" class="tk-c' + (it.d ? ' on' : '') + '" data-tkt="' + i + '" aria-label="Toggle task"></button><input type="text" class="tk-i" data-tki="' + i + '" value="' + esc(it.t) + '" maxlength="80"><button type="button" class="tk-x" data-tkx="' + i + '" aria-label="Remove task">×</button></div>';
+          });
+          o += '<div class="f"><div class="row"><button type="button" class="ghost" data-tkclr="1">Clear done</button></div></div>';
+          o += sh('Display');
+          o += '<div class="tg">' + chk('strike', 'Strike through done') + chk('hideDone', 'Hide done tasks') + '</div>';
+          return o;
+        }
+        var h = kindsHTML();
 
     h += '<div class="tabs" role="tablist">' + (w.type === 'photo' ? [['content', 'Photos'], ['style', 'Style'], ['bg', 'Actions']] : [['content', 'Content'], ['style', 'Style'], ['bg', 'Background']]).map(function (t) {
       return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (S.tab === t[0]) + '">' + t[1] + '</button>';
@@ -899,6 +948,7 @@ html:has(body.side-open) { overflow: hidden !important; }
 
     var c = '';
     if (w.type === 'photo') { c = photoPanel(); }
+        else if (w.type === 'tasks' && S.tab === 'content') { c = tasksPanel(); }
     else if (S.tab === 'content') {
       if (!cnt) {
         c += '<div class="f"><label for="c-text">Text</label><textarea id="c-text" data-k="text" rows="3">' + esc(w.text) + '</textarea></div>';
@@ -921,6 +971,7 @@ html:has(body.side-open) { overflow: hidden !important; }
       c += sh('Typeface');
       c += fontSel();
       c += rng('size', cnt ? 'Digit size' : 'Text size', cnt ? 18 : 12, cnt ? 96 : 120, 1, 'px');
+            if (w.type === 'tasks') c += rng('width', 'Width', 140, 420, 1, 'px');
       if (!(cnt && w.font === 'seg7')) c += rng('weight', 'Weight', 300, 900, 100, '');
       if (!cnt) c += rng('spacing', 'Letter spacing', -2, 12, 0.5, 'px');
       c += sh('Colour');
@@ -992,6 +1043,11 @@ html:has(body.side-open) { overflow: hidden !important; }
   panel.addEventListener('input', function (e) {
     var t = e.target;
     if (t.dataset && t.dataset.hex) { hexInput(t); return; }
+        if (t.dataset && t.dataset.tki !== undefined) {
+          var tw = cur();
+          if (tw && tw.items && tw.items[Number(t.dataset.tki)]) { tw.items[Number(t.dataset.tki)].t = t.value; renderWidgets(); }
+          return;
+        }
     if (!t.dataset || !t.dataset.k || t.type === 'checkbox' || t.tagName === 'SELECT') return;
     if (t.type === 'range') t.style.setProperty('--p', ((t.value - t.min) / (t.max - t.min) * 100) + '%');
     setVal(t);
@@ -1009,7 +1065,13 @@ html:has(body.side-open) { overflow: hidden !important; }
     }
   });
 
-  function select(id) { S.sel = id; renderWidgets(); renderPanel(); }
+  function addTask() {
+      var w = cur(), i = $('#tk-new'); if (!w || w.type !== 'tasks' || !i) return;
+      var v = i.value.trim(); if (!v) return;
+      w.items.push({ t: v, d: false });
+      renderWidgets(); renderPanel('#tk-new');
+    }
+    function select(id) { S.sel = id; renderWidgets(); renderPanel(); }
   var sysWall, sysBusy = false;
     function loadSysWall() {
       if (!native || sysBusy) return;
@@ -1059,7 +1121,23 @@ html:has(body.side-open) { overflow: hidden !important; }
     var attr = b.getAttributeNames().filter(function (n) { return n.indexOf('data-') === 0; })[0];
     var q = attr ? '[' + attr + '="' + b.getAttribute(attr) + '"]' : null;
 
-    if (b.dataset.pm) { var pw1 = cur(); closePM(); if (pw1 && pw1.type === 'photo') photoAct(pw1, b.dataset.pm); return; }
+    if (b.dataset.tkt !== undefined) {
+          var tw1 = cur(), ti1 = tw1 && tw1.items ? tw1.items[Number(b.dataset.tkt)] : null;
+          if (ti1) { ti1.d = !ti1.d; renderWidgets(); renderPanel(); }
+          return;
+        }
+        if (b.dataset.tkx !== undefined) {
+          var tw2 = cur();
+          if (tw2 && tw2.items) { tw2.items.splice(Number(b.dataset.tkx), 1); renderWidgets(); renderPanel(); }
+          return;
+        }
+        if (b.dataset.tkadd) { addTask(); return; }
+        if (b.dataset.tkclr) {
+          var tw3 = cur();
+          if (tw3 && tw3.items) { tw3.items = tw3.items.filter(function (i) { return !i.d; }); renderWidgets(); renderPanel(); }
+          return;
+        }
+        if (b.dataset.pm) { var pw1 = cur(); closePM(); if (pw1 && pw1.type === 'photo') photoAct(pw1, b.dataset.pm); return; }
     if (b.dataset.side) { toggleSide(b.dataset.side === 'open'); return; }
     if (b.dataset.newtoggle) { sideNew = !sideNew; renderSide(); return; }
     if (b.dataset.pick) { S.sel = Number(b.dataset.pick); S.dd = false; S.cp = null; S.dt = false; renderWidgets(); renderPanel(); toggleSide(false); return; }
@@ -1079,7 +1157,7 @@ html:has(body.side-open) { overflow: hidden !important; }
     if (b.dataset.tab) { S.tab = b.dataset.tab; S.dd = false; S.cp = null; S.dt = false; renderPanel(q); return; }
     if (b.dataset.add) {
       if (S.w.length >= 30) return;
-      var nw = b.dataset.add === 'text' ? mkText() : b.dataset.add === 'photo' ? mkPhoto() : mkCount();
+      var nw = b.dataset.add === 'text' ? mkText() : b.dataset.add === 'photo' ? mkPhoto() : b.dataset.add === 'tasks' ? mkTasks() : mkCount();
       S.w.push(nw); S.sel = nw.id; S.tab = 'content'; S.dd = false; S.cp = null; S.dt = false; renderWidgets(); renderPanel(); toggleSide(false); return;
     }
     if (b.hasAttribute('data-remove')) {
@@ -1122,7 +1200,8 @@ html:has(body.side-open) { overflow: hidden !important; }
 
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && ($('.pv') || $('.pm'))) { closePV(); closePM(); return; }
+    if (e.key === 'Enter' && e.target && e.target.id === 'tk-new') { e.preventDefault(); addTask(); return; }
+        if (e.key === 'Escape' && ($('.pv') || $('.pm'))) { closePV(); closePM(); return; }
     if (e.key === 'Escape' && document.body.classList.contains('side-open')) { toggleSide(false); return; }
     if (e.key === 'Escape' && (S.dd || S.cp || S.dt)) { S.dd = false; S.cp = null; S.dt = false; renderPanel(); return; }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('w')) {
@@ -1152,7 +1231,7 @@ html:has(body.side-open) { overflow: hidden !important; }
     if (ctx.mode === 'config' && ctx.appWidgetId) {
       var ex = S.w.filter(function (x) { return x.appWidgetId === ctx.appWidgetId; })[0];
       if (!ex) {
-        ex = ctx.type === 'photo' ? mkPhoto() : ctx.type === 'count' ? mkCount() : mkText();
+        ex = ctx.type === 'photo' ? mkPhoto() : ctx.type === 'count' ? mkCount() : ctx.type === 'tasks' ? mkTasks() : mkText();
         ex.appWidgetId = ctx.appWidgetId; S.w.push(ex);
       }
       S.sel = ex.id;
