@@ -344,8 +344,8 @@ html:has(body.side-open) { overflow: hidden !important; }
 .sd-gi { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; background: var(--surface2); color: var(--fg); font-size: 10px; letter-spacing: 0; text-transform: none; }
 .sd-gt { flex: 1; }
 .sd-s { display: flex; gap: 8px; margin: 12px 0 0; }
-.sd-q { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--surface2); color: var(--fg); font-size: 14px; }
-.sd-ca { flex: none; border: 0; border-radius: 12px; padding: 0 12px; background: var(--surface2); color: var(--fg); font-size: 12px; font-weight: 500; }
+
+.sd-ca { flex: 1; border: 0; border-radius: 12px; padding: 9px 12px; background: var(--surface2); color: var(--fg); font-size: 12px; font-weight: 500; }
 .si-p { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #3ecf6e; }
 .si.on .si-p { background: var(--accent-fg); }
 .sd-g b { min-width: 22px; padding: 2px 7px; border-radius: 999px; background: var(--surface2); color: var(--fg); font-weight: 600; text-align: center; letter-spacing: 0; }
@@ -445,7 +445,7 @@ html:has(body.side-open) { overflow: hidden !important; }
       <button type="button" data-add="photo">Ph &nbsp;Photos</button>
             <button type="button" data-add="tasks">✓ &nbsp;Tasks</button>
     </div>
-    <div class="sd-s"><input type="search" class="sd-q" id="side-q" placeholder="Search widgets" autocomplete="off"><button type="button" class="sd-ca" id="side-ca">Collapse all</button></div>
+    <div class="sd-s"><button type="button" class="sd-ca" id="side-ca">Collapse all</button></div>
         <div class="sd-l" id="side-list"></div>
     <div class="sd-f" id="side-foot"></div>
   </aside>
@@ -821,7 +821,6 @@ html:has(body.side-open) { overflow: hidden !important; }
   /* ---------- sidebar ---------- */
   var sideNew = false;
     var sideCol = {};
-      var sideQ = '';
   var ICO_DEL = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function sideName(x) { return ((x.type === 'text' ? x.text : x.label) || '').trim() || (x.type === 'text' ? 'Text' : x.type === 'photo' ? 'Photos' : x.type === 'tasks' ? 'Tasks' : 'Countdown'); }
   function sideSub(x) {
@@ -839,12 +838,12 @@ html:has(body.side-open) { overflow: hidden !important; }
     var h = '';
     ['text', 'count', 'photo', 'tasks'].forEach(function (t) {
       var all = S.w.filter(function (x) { return x.type === t; });
-            var items = all.filter(function (x) { return !sideQ || (sideName(x) + ' ' + sideSub(x)).toLowerCase().indexOf(sideQ) > -1; })
+            var items = all.slice()
               .sort(function (a, b) { return (b.appWidgetId ? 1 : 0) - (a.appWidgetId ? 1 : 0) || b.id - a.id; });
       var colp = !!sideCol[t];
-            h += '<button type="button" class="sd-g" data-sg="' + t + '" aria-expanded="' + (!colp) + '"><span class="sd-gi">' + info[t][1] + '</span><span class="sd-gt">' + info[t][0] + '</span><b>' + (sideQ ? items.length + '/' + all.length : all.length) + '</b><span class="sd-gc"></span></button>';
-      if (colp && !sideQ) return;
-            if (!items.length) h += '<p class="sd-e">' + (sideQ ? 'No matches' : 'None yet') + '</p>';
+            h += '<button type="button" class="sd-g" data-sg="' + t + '" aria-expanded="' + (!colp) + '"><span class="sd-gi">' + info[t][1] + '</span><span class="sd-gt">' + info[t][0] + '</span><b>' + all.length + '</b><span class="sd-gc"></span></button>';
+      if (colp) return;
+            if (!items.length) h += '<p class="sd-e">None yet</p>';
       items.forEach(function (x) {
         h += '<div class="si' + (x.id === S.sel ? ' on' : '') + '"><button type="button" class="si-b" data-pick="' + x.id + '"><span class="ki">' + info[t][1] + '</span><span class="si-w"><span class="si-t">' + esc(sideName(x)) + '</span><span class="si-s">' + esc(sideSub(x)) + '</span></span>' + (x.appWidgetId ? '<span class="si-p" title="On home screen"></span>' : '') + '</button>' +
           '<button type="button" class="si-x" data-del="' + x.id + '" aria-label="Delete widget"' + (S.w.length < 2 ? ' disabled' : '') + '>' + ICO_DEL + '</button></div>';
@@ -860,8 +859,7 @@ html:has(body.side-open) { overflow: hidden !important; }
             renderSide();
           });
         }
-    var cq = $('#side-q'), ca = $('#side-ca');
-        if (cq && !cq._b) { cq._b = 1; cq.addEventListener('input', function () { sideQ = cq.value.trim().toLowerCase(); renderSide(); }); }
+    var ca = $('#side-ca');
         if (ca && !ca._b) {
           ca._b = 1;
           ca.addEventListener('click', function () {
