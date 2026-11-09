@@ -532,6 +532,7 @@ html:has(body.side-open) { overflow: hidden !important; }
           if (!w.dRep) w.dRep = 'none';
           if (!w.lists) w.lists = ['To-do'];
           if (w.ls === undefined) w.ls = 0;
+                if (w.showDet === undefined) w.showDet = true;
         }
         var TK_REPS = [['none', 'Once'], ['daily', 'Daily'], ['weekly', 'Weekly'], ['monthly', 'Monthly']];
         var TK_BELL = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -980,7 +981,7 @@ html:has(body.side-open) { overflow: hidden !important; }
         if (w.hideDone && it.d) return;
                 if ((it.l || 0) !== (w.ls || 0)) return;
         n++;
-        h += '<div class="tk-r' + (it.d ? ' dn' : '') + (w.strike ? ' st' : '') + '" style="justify-content:' + jc + '"><button type="button" class="tk-c" data-tkt="' + i + '" aria-label="Toggle task"></button><span class="tk-b"><span class="tk-t">' + esc(it.t || ' ') + '</span>' + (it.rem ? '<span class="tk-d">' + esc(tkDetail(it)) + '</span>' : '') + '</span></div>';
+        h += '<div class="tk-r' + (it.d ? ' dn' : '') + (w.strike ? ' st' : '') + '" style="justify-content:' + jc + '"><button type="button" class="tk-c" data-tkt="' + i + '" aria-label="Toggle task"></button><span class="tk-b"><span class="tk-t">' + esc(it.t || ' ') + '</span>' + (it.rem && w.showDet !== false ? '<span class="tk-d">' + esc(tkDetail(it)) + '</span>' : '') + '</span></div>';
       });
       if (!n) h += '<div class="tk-r" style="justify-content:' + jc + ';opacity:.6"><span class="tk-t">No tasks yet</span></div>';
       el.innerHTML = '<div class="tk" style="' + st + '">' + h + '</div>';
@@ -1183,7 +1184,7 @@ html:has(body.side-open) { overflow: hidden !important; }
           });
           o += '<div class="f"><div class="row"><button type="button" class="ghost" data-tkclr="1">Clear done</button></div></div>';
           o += sh('Display');
-          o += '<div class="tg">' + chk('strike', 'Strike through done') + chk('hideDone', 'Hide done tasks') + '</div>';
+          o += '<div class="tg">' + chk('strike', 'Strike through done') + chk('hideDone', 'Hide done tasks') + chk('showDet', 'Show reminder details') + '</div>';
           return o;
         }
         if (S.tab === 'rem' && w.type !== 'tasks') S.tab = 'content';

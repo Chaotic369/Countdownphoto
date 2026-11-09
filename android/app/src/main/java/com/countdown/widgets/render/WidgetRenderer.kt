@@ -148,7 +148,8 @@ object WidgetRenderer {
                         val title = if (cfg.bool("showTitle", true)) cfg.str("label") + (if (listNames.size > 1) " · " + (listNames.getOrNull(listIdx) ?: "") else "") else ""
             val rowH = sz * 1.55f
                         val subH = sz * 0.75f
-                        fun rh(t: TaskItem): Float = rowH + (if (t.rem) subH else 0f)
+                                    val showDet = cfg.bool("showDet", true)
+                        fun rh(t: TaskItem): Float = rowH + (if (t.rem && showDet) subH else 0f)
             val titleH = if (title.isEmpty()) 0f else rowH * 1.15f
             val cw = contentW + 2 * pad
             val ch = titleH + (if (rows.isEmpty()) rowH else rows.map { rh(it) }.sum()) + 2 * pad
@@ -204,7 +205,7 @@ object WidgetRenderer {
                 val tx = x + box + gap
                 c.drawText(line, tx, base(txt, top, rowH), txt)
                 if (task.done && strike) c.drawLine(tx, cy, tx + tw, cy, lineP)
-                                if (task.rem) {
+                                if (task.rem && showDet) {
                                     val dl = TextUtils.ellipsize(detailOf(task), subP, avail, TextUtils.TruncateAt.END).toString()
                                     c.drawText(dl, tx, base(subP, top + rowH, subH), subP)
                                 }
