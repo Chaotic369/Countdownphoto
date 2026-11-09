@@ -46,7 +46,7 @@ object WidgetRenderer {
             "text" -> drawText(ctx, c, cfg, w, h, d)
             "count" -> drawCount(ctx, c, cfg, w, h, d)
             "photo" -> drawPhoto(ctx, c, cfg, w, h, d)
-                        "tasks" -> drawTasks(ctx, c, cfg, w, h, d)
+                        "tasks" -> drawTasksNew(ctx, c, cfg, w, h, d)
             else -> drawHint(c, w, h, d)
         }
         return bmp
@@ -122,8 +122,137 @@ object WidgetRenderer {
         c.restore()
     }
 
-    /* ---------------- tasks ---------------- */
-        private fun drawTasks(ctx: Context, c: Canvas, cfg: WidgetConfig, aw: Int, ah: Int, d: Float) {
+    /* ---------------- tasks (full card; geometry shared with the tap zones) ---------------- */
+        const val TASK_ROWS = 24
+
+        class TaskRow(val index: Int, val task: TaskItem, val top: Float, val h: Float)
+
+        class TaskGeo(
+            val title: String, val sz: Float, val pad: Float, val rowH: Float, val subH: Float,
+            val titleH: Float, val firstTop: Float, val rows: List<TaskRow>, val more: Int, val moreTop: Float
+        )
+
+        /** Row positions in px for a widget of height ah. Used by drawTasksNew and by WidgetActions for tap zones. */
+        fun taskGeo(cfg: WidgetConfig, ah: Int, d: Float): TaskGeo {
+            val sz = cfg.int("size", 18) * d
+            val pad = cfg.int("pad", 18) * d
+            val hideDone = cfg.bool("hideDone")
+            val showDet = cfg.bool("showDet", true)
+            val listIdx = cfg.int("ls", 0)
+            val names = cfg.lists
+            val title = if (cfg.bool("showTitle", true)) cfg.str("label") + (if (names.size > 1) " · " + (names.getOrNull(listIdx) ?: "") else "") else ""
+            val rowH = sz * 1.9f
+            val subH = sz * 0.8f
+            val titleH = if (title.isEmpty()) 0f else rowH * 1.1f
+            val moreH = sz * 1.4f
+            val list = cfg.tasks.withIndex().filter { !(hideDone && it.value.done) && it.value.list == listIdx }
+            fun rh(t: TaskItem): Float = rowH + (if (t.rem && showDet) subH else 0f)
+            val first = pad + titleH
+            val limit = ah - pad
+            var used = first
+            var n = 0
+            while (n < list.size && n < TASK_ROWS) {
+                val h = rh(list[n].value)
+                if (used + h > limit) break
+                used += h
+                n++
+            }
+            if (n < list.size) {
+                while (n > 0 && used + moreH > limit) {
+                    n--
+                    used -= rh(list[n].value)
+                }
+            }
+            val rows = ArrayList<TaskRow>()
+            var y = first
+            for (i in 0 until n) {
+                val h = rh(list[i].value)
+                rows.add(TaskRow(list[i].index, list[i].value, y, h))
+                y += h
+            }
+            return TaskGeo(title, sz, pad, rowH, subH, titleH, first, rows, list.size - n, y)
+        }
+
+        private fun drawTasksNew(ctx: Context, c: Canvas, cfg: WidgetConfig, aw: Int, ah: Int, d: Float) {
+            val g = taskGeo(cfg, ah, d)
+            val sz = g.sz
+            val fg = col(cfg.str("color", "#ffffff"))
+            val italic = cfg.bool("italic")
+            val fontName = cfg.str("font", "Instrument Sans")
+            val align = cfg.str("align", "left")
+            val strike = cfg.bool("strike", true)
+            val showDet = cfg.bool("showDet", true)
+            val contentW = max(40f, aw - 2 * g.pad)
+
+            val txt = TextPaint(Paint.ANTI_ALIAS_FLAG)
+            txt.typeface = FontLoader.get(ctx, fontName, cfg.int("weight", 500), italic)
+            txt.textSize = sz
+            txt.color = fg
+            txt.letterSpacing = (cfg.dbl("spacing", 0.0) * d / sz).toFloat()
+            val head = TextPaint(txt)
+            head.typeface = FontLoader.get(ctx, fontName, 700, italic)
+            val subP = TextPaint(txt)
+            subP.textSize = sz * 0.7f
+            subP.color = alphaOf(fg, 0.6f)
+
+            fun off(w: Float): Float = when (align) { "center" -> (contentW - w) / 2f; "right" -> contentW - w; else -> 0f }
+            fun base(p: Paint, top: Float, h: Float): Float = top + h / 2f - (p.fontMetrics.ascent + p.fontMetrics.descent) / 2f
+
+            val box = sz * 0.95f
+            val gap = sz * 0.6f
+            val ring = Paint(Paint.ANTI_ALIAS_FLAG)
+            ring.style = Paint.Style.STROKE
+            ring.strokeWidth = max(1.5f * d, sz * 0.09f)
+            ring.color = fg
+            val fillP = Paint(Paint.ANTI_ALIAS_FLAG)
+            fillP.color = alphaOf(fg, 0.9f)
+            val lineP = Paint(Paint.ANTI_ALIAS_FLAG)
+            lineP.strokeWidth = max(1f * d, sz * 0.07f)
+            lineP.color = alphaOf(fg, 0.5f)
+
+            drawCard(c, aw.toFloat(), ah.toFloat(), cfg, d)
+            c.save()
+            c.translate(g.pad, 0f)
+
+            if (g.title.isNotEmpty()) {
+                val tt = TextUtils.ellipsize(g.title, head, contentW, TextUtils.TruncateAt.END).toString()
+                c.drawText(tt, off(head.measureText(tt)), base(head, g.pad, g.titleH), head)
+            }
+            if (g.rows.isEmpty() && g.more == 0) {
+                txt.color = alphaOf(fg, 0.6f)
+                val msg = "No tasks yet"
+                c.drawText(msg, off(txt.measureText(msg)), base(txt, g.firstTop, g.rowH), txt)
+            }
+            for (r in g.rows) {
+                val task = r.task
+                val avail = max(10f, contentW - box - gap)
+                txt.color = if (task.done) alphaOf(fg, 0.5f) else fg
+                val line = TextUtils.ellipsize(task.text.ifEmpty { " " }, txt, avail, TextUtils.TruncateAt.END).toString()
+                val tw = txt.measureText(line)
+                val x = off(box + gap + tw)
+                val cy = r.top + g.rowH / 2f
+                if (task.done) {
+                    c.drawCircle(x + box / 2f, cy, box / 2f, fillP)
+                } else {
+                    c.drawCircle(x + box / 2f, cy, box / 2f - ring.strokeWidth / 2f, ring)
+                }
+                val tx = x + box + gap
+                c.drawText(line, tx, base(txt, r.top, g.rowH), txt)
+                if (task.done && strike) c.drawLine(tx, cy, tx + tw, cy, lineP)
+                if (task.rem && showDet) {
+                    val dl = TextUtils.ellipsize(detailOf(task), subP, avail, TextUtils.TruncateAt.END).toString()
+                    c.drawText(dl, tx, base(subP, r.top + g.rowH - sz * 0.2f, g.subH), subP)
+                }
+            }
+            if (g.more > 0) {
+                val m = "+" + g.more + " more"
+                c.drawText(m, off(subP.measureText(m)), base(subP, g.moreTop, sz * 1.4f), subP)
+            }
+            c.restore()
+        }
+
+        /* ---------------- old tasks drawing (unused, safe to delete) ---------------- */
+        private fun drawTasksOld(ctx: Context, c: Canvas, cfg: WidgetConfig, aw: Int, ah: Int, d: Float) {
             val sz = cfg.int("size", 18) * d
             val fg = col(cfg.str("color", "#ffffff"))
             val pad = cfg.int("pad", 18) * d

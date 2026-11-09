@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.view.View
 import android.widget.RemoteViews
 import com.countdown.widgets.R
 import com.countdown.widgets.config.WidgetConfigActivity
@@ -13,6 +14,7 @@ import com.countdown.widgets.data.WidgetConfig
 import com.countdown.widgets.data.WidgetStore
 import com.countdown.widgets.render.WidgetRenderer
 import com.countdown.widgets.viewer.PhotoViewerActivity
+import com.countdown.widgets.work.ReminderScheduler
 import com.countdown.widgets.work.Ticker
 import kotlin.random.Random
 
@@ -108,8 +110,10 @@ object WidgetActions {
                     if (pi != null) rv.setOnClickPendingIntent(zones[i], pi)
                 }
                 if (cfg == null) rv.setOnClickPendingIntent(R.id.zone_c, editIntent(ctx, id))
-            } else {
-                rv.setOnClickPendingIntent(R.id.root, editIntent(ctx, id))
+            } else if (type == "tasks" && cfg != null) {
+                            bindTaskZones(ctx, rv, id, cfg, ah)
+                        } else {
+                            rv.setOnClickPendingIntent(R.id.root, editIntent(ctx, id))
             }
             mgr.updateAppWidget(id, rv)
         } catch (e: Throwable) {
@@ -117,7 +121,49 @@ object WidgetActions {
         }
     }
 
-    fun updateAll(ctx: Context) {
+    const val ACT_TOGGLE = "com.countdown.widgets.action.TOGGLE"
+
+        /** Places one invisible tap zone over every drawn task row (heights set through padding). */
+        private fun bindTaskZones(ctx: Context, rv: RemoteViews, id: Int, cfg: WidgetConfig, ah: Int) {
+            val zones = intArrayOf(
+                R.id.tz0, R.id.tz1, R.id.tz2, R.id.tz3, R.id.tz4, R.id.tz5, R.id.tz6, R.id.tz7,
+                R.id.tz8, R.id.tz9, R.id.tz10, R.id.tz11, R.id.tz12, R.id.tz13, R.id.tz14, R.id.tz15,
+                R.id.tz16, R.id.tz17, R.id.tz18, R.id.tz19, R.id.tz20, R.id.tz21, R.id.tz22, R.id.tz23
+            )
+            val g = WidgetRenderer.taskGeo(cfg, ah, ctx.resources.displayMetrics.density)
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            val edit = editIntent(ctx, id)
+            rv.setViewPadding(R.id.tz_top, 0, g.firstTop.toInt(), 0, 0)
+            rv.setOnClickPendingIntent(R.id.tz_top, edit)
+            rv.setOnClickPendingIntent(R.id.tz_bot, edit)
+            for (i in zones.indices) {
+                val r = g.rows.getOrNull(i)
+                if (r == null) {
+                    rv.setViewVisibility(zones[i], View.GONE)
+                    continue
+                }
+                rv.setViewVisibility(zones[i], View.VISIBLE)
+                rv.setViewPadding(zones[i], 0, r.h.toInt(), 0, 0)
+                val pi = PendingIntent.getBroadcast(ctx, 1_000_000 + id * 100 + i,
+                    Intent(ctx, TasksWidgetProvider::class.java).setAction(ACT_TOGGLE)
+                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+                        .putExtra("task", r.index), flags)
+                rv.setOnClickPendingIntent(zones[i], pi)
+            }
+        }
+
+        /** Ticks / unticks one task from the home screen. */
+        fun toggleTask(ctx: Context, id: Int, index: Int) {
+            val cfg = WidgetStore.forAppWidget(ctx, id) ?: return
+            val a = cfg.raw.optJSONArray("items") ?: return
+            val o = a.optJSONObject(index) ?: return
+            o.put("d", !o.optBoolean("d", false))
+            WidgetStore.save(ctx, cfg)
+            ReminderScheduler.scheduleAll(ctx)
+            update(ctx, AppWidgetManager.getInstance(ctx), id)
+        }
+
+        fun updateAll(ctx: Context) {
         val mgr = AppWidgetManager.getInstance(ctx)
         allIds(ctx).forEach { update(ctx, mgr, it) }
     }

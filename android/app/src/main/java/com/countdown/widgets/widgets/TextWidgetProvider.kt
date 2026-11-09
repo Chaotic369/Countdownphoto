@@ -3,11 +3,20 @@ package com.countdown.widgets.widgets
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import com.countdown.widgets.data.WidgetStore
 import com.countdown.widgets.work.Ticker
 
 class TasksWidgetProvider : AppWidgetProvider() {
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        if (intent.action == WidgetActions.ACT_TOGGLE) {
+            val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0)
+            val idx = intent.getIntExtra("task", -1)
+            if (id != 0 && idx >= 0) WidgetActions.toggleTask(context, id, idx)
+        }
+    }
     override fun onUpdate(context: Context, mgr: AppWidgetManager, ids: IntArray) {
         ids.forEach { WidgetActions.update(context, mgr, it) }
         Ticker.schedule(context)

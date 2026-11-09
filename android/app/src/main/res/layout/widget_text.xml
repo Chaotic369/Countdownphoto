@@ -10,4 +10,38 @@
         android:layout_height="match_parent"
         android:contentDescription="@null"
         android:scaleType="fitXY" />
+
+            <!-- Tap zones for the tasks widget; heights are set from code. Harmless for the text widget. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <FrameLayout android:id="@+id/tz_top" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz0" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz1" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz2" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz3" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz4" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz5" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz6" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz7" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz8" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz9" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz10" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz11" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz12" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz13" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz14" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz15" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz16" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz17" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz18" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz19" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz20" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz21" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz22" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz23" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <FrameLayout android:id="@+id/tz_bot" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+            </LinearLayout>
 </FrameLayout>
