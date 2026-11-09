@@ -220,6 +220,7 @@ class SecondsService : Service() {
 class TickWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
     override fun doWork(): Result {
         Ticker.tick(applicationContext)
+                ReminderScheduler.scheduleAll(applicationContext)
         return Result.success()
     }
 }

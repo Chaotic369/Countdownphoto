@@ -22,6 +22,7 @@ import com.countdown.widgets.data.PhotoStorage
 import com.countdown.widgets.data.WidgetStore
 import com.countdown.widgets.widgets.WidgetActions
 import com.countdown.widgets.work.Ticker
+import com.countdown.widgets.work.ReminderScheduler
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
@@ -63,7 +64,8 @@ class WidgetBridgePlugin : Plugin() {
         if (json == null) { call.reject("config missing"); return }
         val cfg = WidgetStore.put(context, json)
         if (cfg == null) { call.reject("invalid config"); return }
-        val bound = WidgetStore.get(context, cfg.id)?.appWidgetId ?: 0
+        ReminderScheduler.scheduleAll(context)
+                val bound = WidgetStore.get(context, cfg.id)?.appWidgetId ?: 0
         if (bound != 0) {
             WidgetActions.update(context, AppWidgetManager.getInstance(context), bound)
             Ticker.schedule(context)
@@ -77,6 +79,7 @@ class WidgetBridgePlugin : Plugin() {
         val old = WidgetStore.get(context, id)
         PhotoStorage.deleteAll(context, id)
         WidgetStore.delete(context, id)
+                ReminderScheduler.scheduleAll(context)
         if (old != null && old.appWidgetId != 0) {
             WidgetActions.update(context, AppWidgetManager.getInstance(context), old.appWidgetId)
         }
@@ -183,7 +186,15 @@ class WidgetBridgePlugin : Plugin() {
     }
 
     @PluginMethod
-    fun finishConfig(call: PluginCall) {
+    fun requestNotifications(call: PluginCall) {
+            if (Build.VERSION.SDK_INT >= 33) {
+                try { activity.requestPermissions(arrayOf("android.permission.POST_NOTIFICATIONS"), 4411) } catch (e: Throwable) { }
+            }
+            call.resolve()
+        }
+
+        @PluginMethod
+        fun finishConfig(call: PluginCall) {
         val a = activity
         if (a is WidgetConfigActivity) a.runOnUiThread { a.finishOk() }
         call.resolve()

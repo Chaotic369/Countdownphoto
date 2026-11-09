@@ -142,12 +142,16 @@ object WidgetRenderer {
             val head = TextPaint(txt)
             head.typeface = FontLoader.get(ctx, fontName, 700, italic)
 
-            val rows: List<TaskItem> = cfg.tasks.filter { !(hideDone && it.done) }
-            val title = if (cfg.bool("showTitle", true)) cfg.str("label") else ""
+            val listIdx = cfg.int("ls", 0)
+                        val rows: List<TaskItem> = cfg.tasks.filter { !(hideDone && it.done) && it.list == listIdx }
+            val listNames = cfg.lists
+                        val title = if (cfg.bool("showTitle", true)) cfg.str("label") + (if (listNames.size > 1) " · " + (listNames.getOrNull(listIdx) ?: "") else "") else ""
             val rowH = sz * 1.55f
+                        val subH = sz * 0.75f
+                        fun rh(t: TaskItem): Float = rowH + (if (t.rem) subH else 0f)
             val titleH = if (title.isEmpty()) 0f else rowH * 1.15f
             val cw = contentW + 2 * pad
-            val ch = titleH + rowH * max(rows.size, 1) + 2 * pad
+            val ch = titleH + (if (rows.isEmpty()) rowH else rows.map { rh(it) }.sum()) + 2 * pad
             val s = min(1f, min(aw / cw, ah / ch))
             fun off(w: Float): Float = when (align) { "center" -> (contentW - w) / 2f; "right" -> contentW - w; else -> 0f }
             fun base(p: Paint, top: Float, h: Float): Float = top + h / 2f - (p.fontMetrics.ascent + p.fontMetrics.descent) / 2f
@@ -163,6 +167,9 @@ object WidgetRenderer {
                 c.drawText(tt, off(head.measureText(tt)), base(head, 0f, rowH), head)
             }
             val box = sz * 0.95f
+                        val subP = TextPaint(txt)
+                        subP.textSize = sz * 0.7f
+                        subP.color = alphaOf(fg, 0.6f)
             val gap = sz * 0.6f
             val ring = Paint(Paint.ANTI_ALIAS_FLAG)
             ring.style = Paint.Style.STROKE
@@ -179,8 +186,10 @@ object WidgetRenderer {
                 val msg = "No tasks yet"
                 c.drawText(msg, off(txt.measureText(msg)), base(txt, titleH, rowH), txt)
             }
-            rows.forEachIndexed { i, task ->
-                val top = titleH + i * rowH
+            var yy = titleH
+                        rows.forEach { task ->
+                val top = yy
+                                yy += rh(task)
                 val avail = max(10f, contentW - box - gap)
                 txt.color = if (task.done) alphaOf(fg, 0.5f) else fg
                 val line = TextUtils.ellipsize(task.text.ifEmpty { " " }, txt, avail, TextUtils.TruncateAt.END).toString()
@@ -195,11 +204,55 @@ object WidgetRenderer {
                 val tx = x + box + gap
                 c.drawText(line, tx, base(txt, top, rowH), txt)
                 if (task.done && strike) c.drawLine(tx, cy, tx + tw, cy, lineP)
+                                if (task.rem) {
+                                    val dl = TextUtils.ellipsize(detailOf(task), subP, avail, TextUtils.TruncateAt.END).toString()
+                                    c.drawText(dl, tx, base(subP, top + rowH, subH), subP)
+                                }
             }
             c.restore()
         }
 
-        /* ---------------- countdown ---------------- */
+        private val MON3 = arrayOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+                private fun niceDate(s: String): String {
+                    val p = s.split("-")
+                    if (p.size < 3) return s
+                    val y = p[0].toIntOrNull() ?: return s
+                    val m = p[1].toIntOrNull() ?: return s
+                    val d = p[2].toIntOrNull() ?: return s
+                    val now = java.util.Calendar.getInstance()
+                    now.set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    now.set(java.util.Calendar.MINUTE, 0)
+                    now.set(java.util.Calendar.SECOND, 0)
+                    now.set(java.util.Calendar.MILLISECOND, 0)
+                    val t = java.util.Calendar.getInstance()
+                    t.set(y, m - 1, d, 0, 0, 0)
+                    t.set(java.util.Calendar.MILLISECOND, 0)
+                    val df = Math.round((t.timeInMillis - now.timeInMillis) / 86_400_000.0)
+                    return when (df) {
+                        0L -> "Today"
+                        1L -> "Tomorrow"
+                        else -> MON3.getOrElse(m - 1) { "" } + " " + d
+                    }
+                }
+
+                private fun niceTime(s: String): String {
+                    val p = s.split(":")
+                    val h = p.getOrNull(0)?.toIntOrNull() ?: return s
+                    val m = p.getOrNull(1)?.toIntOrNull() ?: 0
+                    val h12 = if (h % 12 == 0) 12 else h % 12
+                    return h12.toString() + ":" + (if (m < 10) "0$m" else "$m") + (if (h < 12) " AM" else " PM")
+                }
+
+                private fun detailOf(t: TaskItem): String {
+                    val parts = ArrayList<String>()
+                    if (t.date.isNotEmpty()) parts.add(niceDate(t.date))
+                    if (t.time.isNotEmpty()) parts.add(niceTime(t.time))
+                    if (t.rep.isNotEmpty() && t.rep != "none") parts.add(t.rep.replaceFirstChar { it.uppercase() })
+                    return if (parts.isEmpty()) "Reminder" else parts.joinToString(" · ")
+                }
+
+                /* ---------------- countdown ---------------- */
     private class Item(val text: String, val label: String, val w: Float, val h: Float, val numW: Float)
 
     private fun drawCount(ctx: Context, c: Canvas, cfg: WidgetConfig, aw: Int, ah: Int, d: Float) {

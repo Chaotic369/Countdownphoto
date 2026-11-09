@@ -358,6 +358,13 @@ html:has(body.side-open) { overflow: hidden !important; }
 .tk-e .tk-c.on { background: var(--accent); border-color: var(--accent); }
 .tk-i { flex: 1; min-width: 0; }
 .tk-x { flex: none; width: 34px; height: 34px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; padding: 0; }
+.tk-b { min-width: 0; display: flex; flex-direction: column; }
+.tk-d { font-size: 0.72em; opacity: 0.65; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-b2 { flex: none; width: 34px; height: 34px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); display: grid; place-items: center; padding: 0; }
+.tk-b2.on { color: var(--accent); }
+.tk-ed { display: flex; flex-direction: column; gap: 8px; margin: -2px 0 8px 30px; padding: 10px; background: var(--surface2); border-radius: 14px; }
+.tk-s { margin: -4px 0 6px 30px; }
+.tk-i[type="date"], .tk-i[type="time"] { border: 1px solid transparent; border-radius: 12px; padding: 9px 11px; font-size: 14px; background: var(--surface2); color: var(--fg); }
 
 @keyframes pwz { from { transform: scale(1.12); opacity: 0; } to { transform: none; opacity: 1; } }
 .pe { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 12px; font-size: 13px; color: rgba(255, 255, 255, 0.85); }
@@ -489,11 +496,153 @@ html:has(body.side-open) { overflow: hidden !important; }
 
   function mkTasks() {
       return { id: nid++, type: 'tasks', label: 'To-do', showTitle: true,
-        items: [{ t: 'Plan the week', d: false }, { t: 'Drink water', d: true }, { t: 'Call a friend', d: false }],
+        lists: ['To-do'], ls: 0, rNotify: true, rSound: true, rVib: true, rLead: '0', dRem: false, dDate: '', dTime: '', dRep: 'none',
+                items: [{ i: 1, t: 'Plan the week', d: false, l: 0, rem: false }, { i: 2, t: 'Drink water', d: true, l: 0, rem: false }, { i: 3, t: 'Call a friend', d: false, l: 0, rem: false }],
         font: 'Instrument Sans', size: 18, weight: 500, italic: false, color: '#ffffff', spacing: 0, align: 'left', width: 240, strike: true, hideDone: false,
         bgOn: true, bg: '#000000', bgOpacity: 40, blur: 14, radius: 24, pad: 18, border: false, borderColor: '#ffffff', appWidgetId: 0 };
     }
-    function mkDemoPhoto() {
+    function tkp(n) { return ('0' + n).slice(-2); }
+        function tkDay(d) { return d.getFullYear() + '-' + tkp(d.getMonth() + 1) + '-' + tkp(d.getDate()); }
+        function tkLists(w) { return (w.lists && w.lists.length) ? w.lists : ['To-do']; }
+        function tkSuffix(w) { var l = tkLists(w); return l.length > 1 ? ' · ' + (l[w.ls || 0] || '') : ''; }
+        function tkId() { return Date.now() * 1000 + Math.floor(Math.random() * 1000); }
+        function tkNorm(w) {
+          if (w.rNotify === undefined) w.rNotify = true;
+          if (w.rSound === undefined) w.rSound = true;
+          if (w.rVib === undefined) w.rVib = true;
+          if (w.rLead === undefined) w.rLead = '0';
+          if (!w.dRep) w.dRep = 'none';
+          if (!w.lists) w.lists = ['To-do'];
+          if (w.ls === undefined) w.ls = 0;
+        }
+        var TK_REPS = [['none', 'Once'], ['daily', 'Daily'], ['weekly', 'Weekly'], ['monthly', 'Monthly']];
+        var TK_BELL = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        function tkFmtTime(hm) { var p = String(hm).split(':'), h = +p[0], m = +p[1] || 0; if (isNaN(h)) return hm; return ((h % 12) || 12) + ':' + tkp(m) + ' ' + (h < 12 ? 'AM' : 'PM'); }
+        function tkFmtDate(ds) {
+          var p = String(ds).split('-'), d = new Date(+p[0], +p[1] - 1, +p[2]), n = new Date();
+          if (isNaN(d.getTime())) return ds;
+          var t0 = new Date(n.getFullYear(), n.getMonth(), n.getDate()), df = Math.round((d - t0) / 864e5);
+          if (df === 0) return 'Today';
+          if (df === 1) return 'Tomorrow';
+          return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()] + ' ' + d.getDate();
+        }
+        function tkDetail(it) {
+          var a = [];
+          if (it.date) a.push(tkFmtDate(it.date));
+          if (it.time) a.push(tkFmtTime(it.time));
+          if (it.rep && it.rep !== 'none') a.push(it.rep.charAt(0).toUpperCase() + it.rep.slice(1));
+          return a.join(' · ') || 'Reminder';
+        }
+        function tkTodayOrNext(hm) {
+          var n = new Date(), p = hm.split(':'), at = new Date(n.getFullYear(), n.getMonth(), n.getDate(), +p[0], +p[1]);
+          if (at.getTime() <= n.getTime()) at.setDate(at.getDate() + 1);
+          return tkDay(at);
+        }
+        /* typed text like "call mom 5pm tomorrow daily" -> time, date, repeat */
+        function tkParse(s) {
+          var out = { text: s, time: '', date: '', rep: '' }, t = s, m, now = new Date(), cur0 = now.getHours() * 60 + now.getMinutes();
+          function cut(r) { t = t.replace(r, ' '); }
+          m = /(?:\bat\s+)?\b(\d{1,2})(?::([0-5]\d))?\s*(am|pm)\b/i.exec(t);
+          if (m && +m[1] >= 1 && +m[1] <= 12) {
+            out.time = tkp(+m[1] % 12 + (/pm/i.test(m[3]) ? 12 : 0)) + ':' + (m[2] || '00'); cut(m[0]);
+          } else if ((m = /(?:\bat\s+)?\b([01]?\d|2[0-3]):([0-5]\d)\b/.exec(t))) {
+            out.time = tkp(+m[1]) + ':' + m[2]; cut(m[0]);
+          } else if ((m = /\bat\s+(\d{1,2})\b(?!\s*[:%])/i.exec(t)) && +m[1] >= 1 && +m[1] <= 12) {
+            var a0 = (+m[1] % 12) * 60, p0 = a0 + 720, v0 = a0 > cur0 ? a0 : p0 > cur0 ? p0 : a0;
+            out.time = tkp(Math.floor(v0 / 60)) + ':' + tkp(v0 % 60); cut(m[0]);
+          }
+          m = /\b(today|tonight|tomorrow|tmrw)\b/i.exec(t);
+          if (m) { var d0 = new Date(); if (/^(tomorrow|tmrw)$/i.test(m[1])) d0.setDate(d0.getDate() + 1); out.date = tkDay(d0); cut(m[0]); }
+          m = /\b(?:every\s*day|daily|every\s*week|weekly|every\s*month|monthly)\b/i.exec(t);
+          if (m) { out.rep = /day|daily/i.test(m[0]) ? 'daily' : /week/i.test(m[0]) ? 'weekly' : 'monthly'; cut(m[0]); }
+          var clean = t.replace(/\s+/g, ' ').replace(/\s+(at|on|by)$/i, '').trim();
+          out.text = clean || s.trim();
+          return out;
+        }
+        /* next occurrence (ms) of a reminder that has not fired yet, or 0 */
+        function tkAt(it) {
+          var p = (it.date || tkDay(new Date())).split('-'), t = (it.time || '09:00').split(':');
+          var lim = Math.max(it.rl || 0, Date.now() - 12e4), rep = it.rep || 'none', step = 0, d, guard = 0;
+          do {
+            d = new Date(+p[0], +p[1] - 1 + (rep === 'monthly' ? step : 0), +p[2] + (rep === 'daily' ? step : rep === 'weekly' ? step * 7 : 0), +t[0], +t[1]).getTime();
+            step++;
+            if (rep === 'none') return d > lim ? d : 0;
+          } while (d <= lim && guard++ < 5000);
+          return d;
+        }
+        var tkAC = null;
+        function tkBell(big) {
+          try {
+            var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+            tkAC = tkAC || new AC();
+            if (tkAC.state === 'suspended') tkAC.resume();
+            var t0 = tkAC.currentTime;
+            [[1318.5, 0], [1760, 0.11]].forEach(function (n) {
+              var o = tkAC.createOscillator(), g = tkAC.createGain();
+              o.type = 'sine'; o.frequency.value = n[0];
+              g.gain.setValueAtTime(0.0001, t0 + n[1]);
+              g.gain.exponentialRampToValueAtTime(0.25, t0 + n[1] + 0.01);
+              g.gain.exponentialRampToValueAtTime(0.0001, t0 + n[1] + (big ? 0.9 : 0.5));
+              o.connect(g); g.connect(tkAC.destination); o.start(t0 + n[1]); o.stop(t0 + n[1] + 1);
+            });
+          } catch (err) { }
+        }
+        function tkToast(msg) {
+          var d = document.createElement('div'); d.textContent = msg;
+          d.style.cssText = 'position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:95;max-width:90vw;padding:12px 18px;border-radius:14px;background:var(--accent);color:var(--accent-fg);font-size:14px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.4)';
+          document.body.appendChild(d);
+          setTimeout(function () { d.remove(); }, 4000);
+        }
+        function tkPlugin() {
+          try { return window.Capacitor && ((Capacitor.Plugins && Capacitor.Plugins.WidgetBridge) || (Capacitor.registerPlugin && Capacitor.registerPlugin('WidgetBridge'))); } catch (err) { return null; }
+        }
+        function tkAskNotify() {
+          if (native) {
+            var P = tkPlugin();
+            if (P && P.requestNotifications) { try { P.requestNotifications().catch(function () { }); } catch (err) { } }
+          } else if (window.Notification && Notification.permission === 'default') {
+            try { Notification.requestPermission().catch(function () { }); } catch (err) { }
+          }
+        }
+        function tkSyncDraft(w) {
+          var e;
+          if ((e = $('#c-dRem'))) e.checked = !!w.dRem;
+          if ((e = $('#tk-date'))) e.value = w.dDate || '';
+          if ((e = $('#tk-time'))) e.value = w.dTime || '';
+          document.querySelectorAll('[data-tkdr]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tkdr === (w.dRep || 'none'))); });
+        }
+        function tkLive(v) {
+          var w = cur(); if (!w || w.type !== 'tasks') return;
+          var r = tkParse(v), hint = $('#tk-hint'), found = !!(r.time || r.date || r.rep);
+          if (found) {
+            w.dRem = true;
+            if (r.time) w.dTime = r.time;
+            if (r.date) w.dDate = r.date;
+            if (r.rep) w.dRep = r.rep;
+            tkSyncDraft(w);
+          }
+          if (hint) hint.textContent = found ? 'Reminder: ' + tkDetail({ date: r.date || w.dDate, time: r.time || w.dTime, rep: r.rep || w.dRep }) : '';
+        }
+        /* browser demo only: the Android app fires reminders natively */
+        function tkCheck() {
+          if (native) return;
+          var now = Date.now(), ch = false;
+          S.w.forEach(function (w) {
+            if (w.type !== 'tasks' || w.rNotify === false) return;
+            (w.items || []).forEach(function (it) {
+              if (!it.rem || it.d) return;
+              var at = tkAt(it); if (!at) return;
+              if (at - (Number(w.rLead) || 0) * 6e4 > now) return;
+              it.rl = at; ch = true;
+              if (w.rSound !== false) tkBell(true);
+              if (w.rVib !== false && navigator.vibrate) { try { navigator.vibrate([200, 100, 200]); } catch (err) { } }
+              tkToast('Reminder: ' + it.t + ' · ' + tkDetail(it));
+              try { if (window.Notification && Notification.permission === 'granted') new Notification(it.t, { body: tkDetail(it) }); } catch (err) { }
+            });
+          });
+          if (ch) renderWidgets();
+        }
+        function mkDemoPhoto() {
     var scenes = [['#ff9a5a', '#ffd86b', '#7a3b69'], ['#4a7bd0', '#8fd3ff', '#16305f'], ['#6fbf73', '#d8f5a2', '#1f5a3a'], ['#b06be0', '#ff9acb', '#3a1a6a']];
     var w = mkPhoto();
     w.label = 'Demo photos'; w.interval = 4;
@@ -730,11 +879,12 @@ html:has(body.side-open) { overflow: hidden !important; }
       var jc = w.align === 'center' ? 'center' : w.align === 'right' ? 'flex-end' : 'flex-start';
       var st = 'font-family:' + fam + ';font-weight:' + w.weight + ';font-size:' + w.size + 'px;color:' + w.color + ';letter-spacing:' + w.spacing + 'px;width:' + w.width + 'px;' + (w.italic ? 'font-style:italic;' : '');
       var h = '', n = 0;
-      if (w.showTitle && w.label) h += '<div class="tk-h" style="text-align:' + (w.align || 'left') + '">' + esc(w.label) + '</div>';
+      if (w.showTitle && w.label) h += '<div class="tk-h" style="text-align:' + (w.align || 'left') + '">' + esc(w.label + tkSuffix(w)) + '</div>';
       (w.items || []).forEach(function (it, i) {
         if (w.hideDone && it.d) return;
+                if ((it.l || 0) !== (w.ls || 0)) return;
         n++;
-        h += '<div class="tk-r' + (it.d ? ' dn' : '') + (w.strike ? ' st' : '') + '" style="justify-content:' + jc + '"><button type="button" class="tk-c" data-tkt="' + i + '" aria-label="Toggle task"></button><span class="tk-t">' + esc(it.t || ' ') + '</span></div>';
+        h += '<div class="tk-r' + (it.d ? ' dn' : '') + (w.strike ? ' st' : '') + '" style="justify-content:' + jc + '"><button type="button" class="tk-c" data-tkt="' + i + '" aria-label="Toggle task"></button><span class="tk-b"><span class="tk-t">' + esc(it.t || ' ') + '</span>' + (it.rem ? '<span class="tk-d">' + esc(tkDetail(it)) + '</span>' : '') + '</span></div>';
       });
       if (!n) h += '<div class="tk-r" style="justify-content:' + jc + ';opacity:.6"><span class="tk-t">No tasks yet</span></div>';
       el.innerHTML = '<div class="tk" style="' + st + '">' + h + '</div>';
@@ -926,7 +1076,7 @@ html:has(body.side-open) { overflow: hidden !important; }
       return o;
     }
 
-    function tasksPanel() {
+    function tasksPanelOld() {
           var o = sh('Title');
           o += chk('showTitle', 'Show title');
           o += '<div class="f"><label for="c-label">Title text</label><input type="text" id="c-label" data-k="label" value="' + esc(w.label) + '"' + (w.showTitle ? '' : ' disabled') + '></div>';
@@ -940,15 +1090,64 @@ html:has(body.side-open) { overflow: hidden !important; }
           o += '<div class="tg">' + chk('strike', 'Strike through done') + chk('hideDone', 'Hide done tasks') + '</div>';
           return o;
         }
-        var h = kindsHTML();
+        if (S.tab === 'rem' && w.type !== 'tasks') S.tab = 'content';
+                function tasksPanel() {
+                  tkNorm(w);
+                  var L = tkLists(w), ls = Math.min(w.ls || 0, L.length - 1), o = sh('Title'), cnt2 = 0;
+                  o += chk('showTitle', 'Show title');
+                  o += '<div class="f"><label for="c-label">Title text</label><input type="text" id="c-label" data-k="label" value="' + esc(w.label) + '"' + (w.showTitle ? '' : ' disabled') + '></div>';
+                  o += sh('Lists');
+                  o += '<div class="f"><div class="row">' + L.map(function (n, k) { return '<button type="button" class="chip" data-tkl="' + k + '" aria-pressed="' + (k === ls) + '">' + esc(n) + '</button>'; }).join('') + '</div></div>';
+                  o += '<div class="f"><div class="row"><input type="text" id="tk-list" class="tk-i" placeholder="New list name" maxlength="24" autocomplete="off"><button type="button" class="ghost" data-tkladd="1">Add list</button>' + (L.length > 1 ? '<button type="button" class="ghost" data-tkldel="1">Delete list</button>' : '') + '</div></div>';
+                  o += sh('Add task');
+                  o += '<div class="f"><div class="row"><input type="text" id="tk-new" class="tk-i" placeholder="e.g. Call mom 5pm tomorrow" maxlength="80" autocomplete="off"><button type="button" class="ghost" data-tkadd="1">Add</button></div><p class="hint" id="tk-hint"></p></div>';
+                  o += '<label class="sw"><input type="checkbox" id="c-dRem" data-tkdrem="1"' + (w.dRem ? ' checked' : '') + '><span class="knob"></span><span>Set as reminder</span></label>';
+                  o += '<div class="f"><div class="row"><input type="date" id="tk-date" class="tk-i" data-k="dDate" value="' + esc(w.dDate || '') + '"><input type="time" id="tk-time" class="tk-i" data-k="dTime" value="' + esc(w.dTime || '') + '"></div></div>';
+                  o += '<div class="f"><span class="lb">Repeat</span><div class="row">' + TK_REPS.map(function (r) { return '<button type="button" class="chip" data-tkdr="' + r[0] + '" aria-pressed="' + ((w.dRep || 'none') === r[0]) + '">' + r[1] + '</button>'; }).join('') + '</div></div>';
+                  o += sh('Tasks');
+                  (w.items || []).forEach(function (it, i) {
+                    if ((it.l || 0) !== ls) return;
+                    if (!it.i) it.i = tkId();
+                    cnt2++;
+                    o += '<div class="tk-e"><button type="button" class="tk-c' + (it.d ? ' on' : '') + '" data-tkt="' + i + '" aria-label="Toggle task"></button><input type="text" class="tk-i" data-tki="' + i + '" value="' + esc(it.t) + '" maxlength="80"><button type="button" class="tk-b2' + (it.rem ? ' on' : '') + '" data-tkr="' + i + '" aria-label="Reminder">' + TK_BELL + '</button><button type="button" class="tk-x" data-tkx="' + i + '" aria-label="Remove task">×</button></div>';
+                    if (it.rem) o += '<p class="hint tk-s">' + esc(tkDetail(it)) + '</p>';
+                    if (it.rem && S.tkx === it.i) {
+                      o += '<div class="tk-ed"><div class="row"><input type="date" class="tk-i" data-tkf="date:' + i + '" value="' + esc(it.date || '') + '"><input type="time" class="tk-i" data-tkf="time:' + i + '" value="' + esc(it.time || '') + '"></div><div class="row">' +
+                        TK_REPS.map(function (r) { return '<button type="button" class="chip" data-tkrep="' + i + ':' + r[0] + '" aria-pressed="' + ((it.rep || 'none') === r[0]) + '">' + r[1] + '</button>'; }).join('') +
+                        '<button type="button" class="ghost" data-tkrr="' + i + '">Remove reminder</button></div></div>';
+                    }
+                  });
+                  if (!cnt2) o += '<p class="hint">No tasks in this list yet.</p>';
+                  o += '<div class="f"><div class="row"><button type="button" class="ghost" data-tkclr="1">Clear done</button></div></div>';
+                  o += sh('Display');
+                  o += '<div class="tg">' + chk('strike', 'Strike through done') + chk('hideDone', 'Hide done tasks') + '</div>';
+                  return o;
+                }
+                function remPanel() {
+                  tkNorm(w);
+                  var o = sh('Notifications'), n = 0;
+                  o += '<div class="tg">' + chk('rNotify', 'Notify me') + chk('rSound', 'Tick bell sound') + chk('rVib', 'Vibrate') + '</div>';
+                  o += opts('rLead', 'Notify ahead of time', [['0', 'On time'], ['5', '5 min'], ['10', '10 min'], ['30', '30 min'], ['60', '1 hour']]);
+                  o += '<div class="f"><div class="row"><button type="button" class="ghost" data-tkbell="1">Play bell</button><button type="button" class="ghost" data-tkperm="1">Allow notifications</button></div></div>';
+                  o += sh('Scheduled');
+                  (w.items || []).forEach(function (it) {
+                    if (!it.rem) return;
+                    n++;
+                    o += '<p class="hint"><b>' + esc(it.t) + '</b><br>' + esc(tkDetail(it)) + (it.d ? ' · done' : '') + '</p>';
+                  });
+                  if (!n) o += '<p class="hint">No reminders yet. Type a task with a time, like "call mom 5pm tomorrow daily", or tap the bell on a task.</p>';
+                  return o;
+                }
+                var h = kindsHTML();
 
-    h += '<div class="tabs" role="tablist">' + (w.type === 'photo' ? [['content', 'Photos'], ['style', 'Style'], ['bg', 'Actions']] : [['content', 'Content'], ['style', 'Style'], ['bg', 'Background']]).map(function (t) {
+    h += '<div class="tabs" role="tablist">' + (w.type === 'photo' ? [['content', 'Photos'], ['style', 'Style'], ['bg', 'Actions']] : w.type === 'tasks' ? [['content', 'Tasks'], ['rem', 'Reminders'], ['style', 'Style'], ['bg', 'Background']] : [['content', 'Content'], ['style', 'Style'], ['bg', 'Background']]).map(function (t) {
       return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (S.tab === t[0]) + '">' + t[1] + '</button>';
     }).join('') + '</div>';
 
     var c = '';
     if (w.type === 'photo') { c = photoPanel(); }
         else if (w.type === 'tasks' && S.tab === 'content') { c = tasksPanel(); }
+                else if (w.type === 'tasks' && S.tab === 'rem') { c = remPanel(); }
     else if (S.tab === 'content') {
       if (!cnt) {
         c += '<div class="f"><label for="c-text">Text</label><textarea id="c-text" data-k="text" rows="3">' + esc(w.text) + '</textarea></div>';
@@ -1043,7 +1242,13 @@ html:has(body.side-open) { overflow: hidden !important; }
   panel.addEventListener('input', function (e) {
     var t = e.target;
     if (t.dataset && t.dataset.hex) { hexInput(t); return; }
-        if (t.dataset && t.dataset.tki !== undefined) {
+        if (t.dataset && t.dataset.tkf) {
+              var tf = t.dataset.tkf.split(':'), tw4 = cur(), ti4 = tw4 && tw4.items ? tw4.items[Number(tf[1])] : null;
+              if (ti4) { ti4[tf[0]] = t.value; renderWidgets(); }
+              return;
+            }
+            if (t.id === 'tk-new') { tkLive(t.value); return; }
+            if (t.dataset && t.dataset.tki !== undefined) {
           var tw = cur();
           if (tw && tw.items && tw.items[Number(t.dataset.tki)]) { tw.items[Number(t.dataset.tki)].t = t.value; renderWidgets(); }
           return;
@@ -1053,11 +1258,13 @@ html:has(body.side-open) { overflow: hidden !important; }
     setVal(t);
     var o = document.getElementById('o-' + t.dataset.k);
     if (o) o.textContent = t.value + (t.dataset.u || '');
+        if (t.dataset.k === 'dDate' || t.dataset.k === 'dTime') { var dw = cur(); if (dw && !dw.dRem) { dw.dRem = true; tkSyncDraft(dw); } }
     renderWidgets();
   });
   panel.addEventListener('change', function (e) {
     var t = e.target;
     if (t.id === 'photo-file') { addPhotos(t.files); t.value = ''; return; }
+        if (t.dataset && t.dataset.tkdrem) { var dw3 = cur(); if (dw3) dw3.dRem = t.checked; return; }
     if (!t.dataset || !t.dataset.k) return;
     if (t.type === 'color') { renderPanel('#' + t.id); return; }
     if (t.type === 'checkbox' || t.tagName === 'SELECT') {
@@ -1068,7 +1275,15 @@ html:has(body.side-open) { overflow: hidden !important; }
   function addTask() {
       var w = cur(), i = $('#tk-new'); if (!w || w.type !== 'tasks' || !i) return;
       var v = i.value.trim(); if (!v) return;
-      w.items.push({ t: v, d: false });
+      var pr = tkParse(v), rem = !!(w.dRem || pr.time || pr.date || pr.rep);
+            var nit = { i: tkId(), t: pr.text, d: false, l: Math.min(w.ls || 0, tkLists(w).length - 1), rem: false };
+            if (rem) {
+              nit.rem = true; nit.time = pr.time || w.dTime || '09:00';
+              nit.date = pr.date || w.dDate || tkTodayOrNext(nit.time);
+              nit.rep = pr.rep || w.dRep || 'none';
+            }
+            w.items.push(nit);
+            if (rem) { w.dRem = false; w.dDate = ''; w.dTime = ''; w.dRep = 'none'; tkAskNotify(); }
       renderWidgets(); renderPanel('#tk-new');
     }
     function select(id) { S.sel = id; renderWidgets(); renderPanel(); }
@@ -1123,7 +1338,7 @@ html:has(body.side-open) { overflow: hidden !important; }
 
     if (b.dataset.tkt !== undefined) {
           var tw1 = cur(), ti1 = tw1 && tw1.items ? tw1.items[Number(b.dataset.tkt)] : null;
-          if (ti1) { ti1.d = !ti1.d; renderWidgets(); renderPanel(); }
+          if (ti1) { ti1.d = !ti1.d; if (ti1.d && tw1.rSound !== false) tkBell(); renderWidgets(); renderPanel(); }
           return;
         }
         if (b.dataset.tkx !== undefined) {
@@ -1132,6 +1347,47 @@ html:has(body.side-open) { overflow: hidden !important; }
           return;
         }
         if (b.dataset.tkadd) { addTask(); return; }
+                if (b.dataset.tkl !== undefined) { var tkw = cur(); if (tkw) { tkw.ls = Number(b.dataset.tkl); renderWidgets(); renderPanel(); } return; }
+                if (b.dataset.tkladd) {
+                  var tkw2 = cur(), tkli = $('#tk-list');
+                  if (tkw2 && tkli && tkli.value.trim()) { tkw2.lists = tkLists(tkw2).slice(); tkw2.lists.push(tkli.value.trim().slice(0, 24)); tkw2.ls = tkw2.lists.length - 1; renderWidgets(); renderPanel(); }
+                  return;
+                }
+                if (b.dataset.tkldel) {
+                  var tkw3 = cur();
+                  if (tkw3 && tkLists(tkw3).length > 1) {
+                    var tk0 = Math.min(tkw3.ls || 0, tkLists(tkw3).length - 1);
+                    tkw3.lists = tkLists(tkw3).slice(); tkw3.lists.splice(tk0, 1);
+                    tkw3.items = (tkw3.items || []).filter(function (x) { return (x.l || 0) !== tk0; });
+                    tkw3.items.forEach(function (x) { if ((x.l || 0) > tk0) x.l = (x.l || 0) - 1; });
+                    tkw3.ls = Math.max(0, tk0 - 1);
+                    renderWidgets(); renderPanel();
+                  }
+                  return;
+                }
+                if (b.dataset.tkdr !== undefined) { var tkw4 = cur(); if (tkw4) { tkw4.dRep = b.dataset.tkdr; tkw4.dRem = true; tkSyncDraft(tkw4); } return; }
+                if (b.dataset.tkr !== undefined) {
+                  var tkw5 = cur(), tkit = tkw5 && tkw5.items ? tkw5.items[Number(b.dataset.tkr)] : null;
+                  if (tkit) {
+                    if (!tkit.i) tkit.i = tkId();
+                    if (!tkit.rem) { tkit.rem = true; tkit.time = tkit.time || '09:00'; tkit.date = tkit.date || tkTodayOrNext(tkit.time); tkit.rep = tkit.rep || 'none'; S.tkx = tkit.i; tkAskNotify(); }
+                    else S.tkx = S.tkx === tkit.i ? null : tkit.i;
+                    renderWidgets(); renderPanel();
+                  }
+                  return;
+                }
+                if (b.dataset.tkrr !== undefined) {
+                  var tkw6 = cur(), tkit2 = tkw6 && tkw6.items ? tkw6.items[Number(b.dataset.tkrr)] : null;
+                  if (tkit2) { tkit2.rem = false; S.tkx = null; renderWidgets(); renderPanel(); }
+                  return;
+                }
+                if (b.dataset.tkrep !== undefined) {
+                  var tkp2 = b.dataset.tkrep.split(':'), tkw7 = cur(), tkit3 = tkw7 && tkw7.items ? tkw7.items[Number(tkp2[0])] : null;
+                  if (tkit3) { tkit3.rep = tkp2[1]; renderWidgets(); renderPanel(); }
+                  return;
+                }
+                if (b.dataset.tkbell !== undefined) { tkBell(true); return; }
+                if (b.dataset.tkperm !== undefined) { tkAskNotify(); return; }
         if (b.dataset.tkclr) {
           var tw3 = cur();
           if (tw3 && tw3.items) { tw3.items = tw3.items.filter(function (i) { return !i.d; }); renderWidgets(); renderPanel(); }
@@ -1253,7 +1509,8 @@ html:has(body.side-open) { overflow: hidden !important; }
   tickClock();
   setInterval(function () {
     tickClock();
-    document.querySelectorAll('.w[data-type="photo"]').forEach(function (el) {
+    tkCheck();
+        document.querySelectorAll('.w[data-type="photo"]').forEach(function (el) {
       var pw = S.w.filter(function (x) { return x.id === Number(el.dataset.id); })[0];
       if (pw && pw.auto && !pw.paused && pw.photos.length > 1 && !$('.pv') && !$('.pm') && Date.now() - pw.last >= pw.interval * 1000) {
         if (photoStep(pw, 1)) { fillPhoto(el, pw, true); persist(); } else pw.last = Date.now();

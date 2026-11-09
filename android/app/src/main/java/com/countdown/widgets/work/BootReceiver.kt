@@ -12,6 +12,7 @@ class BootReceiver : BroadcastReceiver() {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 Ticker.ensureWork(context)
                 WidgetActions.updateAll(context)
+                                ReminderScheduler.scheduleAll(context)
                 Ticker.schedule(context)
             }
             Ticker.ACTION -> Ticker.tick(context)

@@ -28,7 +28,8 @@ object WidgetStore {
         if (cfg.appWidgetId == 0 && old != null && old.appWidgetId != 0) {
             cfg.raw.put("appWidgetId", old.appWidgetId)
         }
-        if (cfg.appWidgetId != 0) clearBinding(ctx, cfg.appWidgetId, cfg.id)
+        if (cfg.type == "tasks" && old != null) mergeFired(cfg, old)
+                if (cfg.appWidgetId != 0) clearBinding(ctx, cfg.appWidgetId, cfg.id)
         save(ctx, cfg)
         return cfg
     }
@@ -38,7 +39,24 @@ object WidgetStore {
         p(ctx).edit().putString(PREFIX + cfg.id, cfg.raw.toString()).apply()
     }
 
-    fun delete(ctx: Context, id: Int) {
+    /** Keeps the "last fired" time of reminders so an editor copy never makes them fire twice. */
+        private fun mergeFired(cfg: WidgetConfig, old: WidgetConfig) {
+            val oa = old.raw.optJSONArray("items") ?: return
+            val na = cfg.raw.optJSONArray("items") ?: return
+            val fired = HashMap<Long, Long>()
+            for (i in 0 until oa.length()) {
+                val o = oa.optJSONObject(i) ?: continue
+                val id = o.optLong("i", 0L)
+                if (id != 0L) fired[id] = o.optLong("rl", 0L)
+            }
+            for (i in 0 until na.length()) {
+                val o = na.optJSONObject(i) ?: continue
+                val f = fired[o.optLong("i", 0L)] ?: continue
+                if (f > o.optLong("rl", 0L)) o.put("rl", f)
+            }
+        }
+
+        fun delete(ctx: Context, id: Int) {
         p(ctx).edit().remove(PREFIX + id).apply()
     }
 

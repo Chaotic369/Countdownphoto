@@ -4,7 +4,17 @@ import org.json.JSONObject
 
 data class Photo(val path: String, val name: String)
 
-data class TaskItem(val text: String, val done: Boolean)
+data class TaskItem(
+    val text: String,
+    val done: Boolean,
+    val rem: Boolean = false,
+    val date: String = "",
+    val time: String = "",
+    val rep: String = "none",
+    val list: Int = 0,
+    val id: Long = 0L,
+    val lastFired: Long = 0L
+)
 
 /** Thin wrapper over the JSON the editor saves. Field names match www/index.html. */
 class WidgetConfig(val raw: JSONObject) {
@@ -33,11 +43,28 @@ class WidgetConfig(val raw: JSONObject) {
                 val a = raw.optJSONArray("items") ?: return emptyList()
                 return (0 until a.length()).map {
                     val o = a.optJSONObject(it)
-                    TaskItem(o?.optString("t", "") ?: "", o?.optBoolean("d", false) ?: false)
+                    TaskItem(
+                                            o?.optString("t", "") ?: "",
+                                            o?.optBoolean("d", false) ?: false,
+                                            o?.optBoolean("rem", false) ?: false,
+                                            o?.optString("date", "") ?: "",
+                                            o?.optString("time", "") ?: "",
+                                            o?.optString("rep", "none") ?: "none",
+                                            o?.optInt("l", 0) ?: 0,
+                                            o?.optLong("i", 0L) ?: 0L,
+                                            o?.optLong("rl", 0L) ?: 0L
+                                        )
                 }
             }
 
-        companion object {
+        val lists: List<String>
+                get() {
+                    val a = raw.optJSONArray("lists") ?: return listOf("To-do")
+                    val out = (0 until a.length()).map { a.optString(it, "") }
+                    return if (out.isEmpty()) listOf("To-do") else out
+                }
+
+            companion object {
         fun parse(s: String): WidgetConfig? = try {
             WidgetConfig(JSONObject(s))
         } catch (e: Exception) {
