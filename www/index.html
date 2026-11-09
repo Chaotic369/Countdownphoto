@@ -364,6 +364,24 @@ html:has(body.side-open) { overflow: hidden !important; }
 .tk-b2.on { color: var(--accent); }
 .tk-ed { display: flex; flex-direction: column; gap: 8px; margin: -2px 0 8px 30px; padding: 10px; background: var(--surface2); border-radius: 14px; }
 .tk-s { margin: -4px 0 6px 30px; }
+.tk-pk { flex: 1; min-width: 0; text-align: left; border: 1px solid transparent; border-radius: 12px; padding: 9px 11px; font-size: 14px; background: var(--surface2); color: var(--fg); }
+.pk-ov { position: fixed; inset: 0; z-index: 120; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.5); padding: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 600px) { .pk-ov { align-items: center; } }
+.pk-c0 { width: 100%; max-width: 340px; max-height: 100%; overflow-y: auto; background: var(--surface2); color: var(--fg); border-radius: 22px; padding: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.pk-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 15px; }
+.pk-n { width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--fg); font-size: 22px; line-height: 1; padding: 0; }
+.pk-g { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.pk-g.pk-t { grid-template-columns: repeat(6, 1fr); }
+.pk-w span { text-align: center; font-size: 11px; opacity: 0.6; padding: 4px 0; }
+.pk-b { height: 38px; border: 0; border-radius: 10px; background: transparent; color: var(--fg); font-size: 14px; padding: 0; }
+.pk-b.td { box-shadow: inset 0 0 0 1px var(--accent); }
+.pk-b.on { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.pk-big { text-align: center; font-size: 30px; font-weight: 700; margin: 2px 0 12px; }
+.pk-l { font-size: 12px; opacity: 0.6; margin: 10px 0 4px; }
+.pk-q, .pk-f { display: flex; gap: 8px; margin-top: 10px; }
+.pk-f { margin-top: 14px; }
+.pk-q button, .pk-f button { flex: 1; height: 38px; border: 0; border-radius: 12px; background: color-mix(in srgb, var(--fg) 8%, transparent); color: var(--fg); font-size: 14px; padding: 0; }
+.pk-q button.on, .pk-f button.pk-ok { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
 .tk-i[type="date"], .tk-i[type="time"] { border: 1px solid transparent; border-radius: 12px; padding: 9px 11px; font-size: 14px; background: var(--surface2); color: var(--fg); }
 
 @keyframes pwz { from { transform: scale(1.12); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -604,11 +622,89 @@ html:has(body.side-open) { overflow: hidden !important; }
             try { Notification.requestPermission().catch(function () { }); } catch (err) { }
           }
         }
-        function tkSyncDraft(w) {
+        function tkDLabel(v) { return v ? tkFmtDate(v) : 'Pick date'; }
+            function tkTLabel(v) { return v ? tkFmtTime(v) : 'Pick time'; }
+            /* own date / time picker, replaces the system pickers */
+            function tkPick(kind, val, cb, canClear) {
+              var old = document.getElementById('tk-pk'); if (old) old.remove();
+              var ov = document.createElement('div'), card = document.createElement('div'), now = new Date(), st = {};
+              var MN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+              ov.id = 'tk-pk'; ov.className = 'pk-ov'; card.className = 'pk-c0';
+              ov.appendChild(card);
+              if (kind === 'date') {
+                var dp = /^\d{4}-\d{2}-\d{2}$/.test(val || '') ? String(val).split('-') : null;
+                st.sel = dp ? val : '';
+                st.y = dp ? +dp[0] : now.getFullYear();
+                st.m = dp ? +dp[1] - 1 : now.getMonth();
+              } else {
+                var tp = /^\d{1,2}:\d{2}$/.test(val || '') ? String(val).split(':') : ['9', '00'];
+                st.h = +tp[0]; st.mi = +tp[1];
+              }
+              function onKey(e) { if (e.key === 'Escape') close(); }
+              function close() { document.removeEventListener('keydown', onKey); ov.remove(); }
+              function draw() {
+                var o = '', i, ds;
+                if (kind === 'date') {
+                  var first = new Date(st.y, st.m, 1).getDay(), dim = new Date(st.y, st.m + 1, 0).getDate(), today = tkDay(now);
+                  o += '<div class="pk-h"><button type="button" class="pk-n" data-pk="prev" aria-label="Previous month">‹</button><b>' + MN[st.m] + ' ' + st.y + '</b><button type="button" class="pk-n" data-pk="next" aria-label="Next month">›</button></div>';
+                  o += '<div class="pk-g pk-w">' + ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div><div class="pk-g">';
+                  for (i = 0; i < first; i++) o += '<span></span>';
+                  for (i = 1; i <= dim; i++) {
+                    ds = st.y + '-' + tkp(st.m + 1) + '-' + tkp(i);
+                    o += '<button type="button" class="pk-b' + (ds === today ? ' td' : '') + (ds === st.sel ? ' on' : '') + '" data-pkd="' + ds + '">' + i + '</button>';
+                  }
+                  o += '</div><div class="pk-q"><button type="button" data-pk="today">Today</button><button type="button" data-pk="tmrw">Tomorrow</button></div>';
+                } else {
+                  var h12 = (st.h % 12) || 12, pm = st.h >= 12;
+                  o += '<div class="pk-big">' + h12 + ':' + tkp(st.mi) + ' ' + (pm ? 'PM' : 'AM') + '</div>';
+                  o += '<div class="pk-l">Hour</div><div class="pk-g pk-t">';
+                  for (i = 1; i <= 12; i++) o += '<button type="button" class="pk-b' + (i === h12 ? ' on' : '') + '" data-pkh="' + i + '">' + i + '</button>';
+                  o += '</div><div class="pk-l">Minute</div><div class="pk-g pk-t">';
+                  for (i = 0; i < 60; i += 5) o += '<button type="button" class="pk-b' + (i === st.mi ? ' on' : '') + '" data-pkm="' + i + '">' + tkp(i) + '</button>';
+                  o += '</div><div class="pk-q"><button type="button" data-pk="m-">−1 min</button><button type="button" data-pk="m+">+1 min</button>' +
+                    '<button type="button" class="' + (pm ? '' : 'on') + '" data-pkap="am">AM</button><button type="button" class="' + (pm ? 'on' : '') + '" data-pkap="pm">PM</button></div>';
+                }
+                o += '<div class="pk-f">' + (canClear ? '<button type="button" data-pk="clear">Clear</button>' : '') + '<button type="button" data-pk="cancel">Cancel</button><button type="button" class="pk-ok" data-pk="ok">Set</button></div>';
+                card.innerHTML = o;
+              }
+              ov.addEventListener('click', function (e) {
+                if (e.target === ov) { close(); return; }
+                var b = e.target.closest ? e.target.closest('button') : null, d, a;
+                if (!b) return;
+                e.stopPropagation();
+                d = b.dataset;
+                if (d.pkd) { st.sel = d.pkd; }
+                else if (d.pkh) { st.h = (+d.pkh % 12) + (st.h >= 12 ? 12 : 0); }
+                else if (d.pkm) { st.mi = +d.pkm; }
+                else if (d.pkap) { st.h = (st.h % 12) + (d.pkap === 'pm' ? 12 : 0); }
+                else if (d.pk) {
+                  a = d.pk;
+                  if (a === 'prev') { st.m--; if (st.m < 0) { st.m = 11; st.y--; } }
+                  else if (a === 'next') { st.m++; if (st.m > 11) { st.m = 0; st.y++; } }
+                  else if (a === 'today' || a === 'tmrw') {
+                    var t1 = new Date(); if (a === 'tmrw') t1.setDate(t1.getDate() + 1);
+                    st.sel = tkDay(t1); st.y = t1.getFullYear(); st.m = t1.getMonth();
+                  }
+                  else if (a === 'm-') { st.mi = (st.mi + 59) % 60; }
+                  else if (a === 'm+') { st.mi = (st.mi + 1) % 60; }
+                  else if (a === 'cancel') { close(); return; }
+                  else if (a === 'clear') { close(); cb(''); return; }
+                  else if (a === 'ok') {
+                    var out = kind === 'date' ? (st.sel || tkDay(new Date())) : tkp(st.h) + ':' + tkp(st.mi);
+                    close(); cb(out); return;
+                  }
+                }
+                draw();
+              });
+              document.addEventListener('keydown', onKey);
+              document.body.appendChild(ov);
+              draw();
+            }
+            function tkSyncDraft(w) {
           var e;
           if ((e = $('#c-dRem'))) e.checked = !!w.dRem;
-          if ((e = $('#tk-date'))) e.value = w.dDate || '';
-          if ((e = $('#tk-time'))) e.value = w.dTime || '';
+          if ((e = $('#tk-date'))) e.textContent = tkDLabel(w.dDate);
+          if ((e = $('#tk-time'))) e.textContent = tkTLabel(w.dTime);
           document.querySelectorAll('[data-tkdr]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tkdr === (w.dRep || 'none'))); });
         }
         function tkLive(v) {
@@ -1102,7 +1198,7 @@ html:has(body.side-open) { overflow: hidden !important; }
                   o += sh('Add task');
                   o += '<div class="f"><div class="row"><input type="text" id="tk-new" class="tk-i" placeholder="e.g. Call mom 5pm tomorrow" maxlength="80" autocomplete="off"><button type="button" class="ghost" data-tkadd="1">Add</button></div><p class="hint" id="tk-hint"></p></div>';
                   o += '<label class="sw"><input type="checkbox" id="c-dRem" data-tkdrem="1"' + (w.dRem ? ' checked' : '') + '><span class="knob"></span><span>Set as reminder</span></label>';
-                  o += '<div class="f"><div class="row"><input type="date" id="tk-date" class="tk-i" data-k="dDate" value="' + esc(w.dDate || '') + '"><input type="time" id="tk-time" class="tk-i" data-k="dTime" value="' + esc(w.dTime || '') + '"></div></div>';
+                  o += '<div class="f"><div class="row"><button type="button" id="tk-date" class="tk-pk" data-tkpk="draft:date">' + tkDLabel(w.dDate) + '</button><button type="button" id="tk-time" class="tk-pk" data-tkpk="draft:time">' + tkTLabel(w.dTime) + '</button></div></div>';
                   o += '<div class="f"><span class="lb">Repeat</span><div class="row">' + TK_REPS.map(function (r) { return '<button type="button" class="chip" data-tkdr="' + r[0] + '" aria-pressed="' + ((w.dRep || 'none') === r[0]) + '">' + r[1] + '</button>'; }).join('') + '</div></div>';
                   o += sh('Tasks');
                   (w.items || []).forEach(function (it, i) {
@@ -1112,7 +1208,7 @@ html:has(body.side-open) { overflow: hidden !important; }
                     o += '<div class="tk-e"><button type="button" class="tk-c' + (it.d ? ' on' : '') + '" data-tkt="' + i + '" aria-label="Toggle task"></button><input type="text" class="tk-i" data-tki="' + i + '" value="' + esc(it.t) + '" maxlength="80"><button type="button" class="tk-b2' + (it.rem ? ' on' : '') + '" data-tkr="' + i + '" aria-label="Reminder">' + TK_BELL + '</button><button type="button" class="tk-x" data-tkx="' + i + '" aria-label="Remove task">×</button></div>';
                     if (it.rem) o += '<p class="hint tk-s">' + esc(tkDetail(it)) + '</p>';
                     if (it.rem && S.tkx === it.i) {
-                      o += '<div class="tk-ed"><div class="row"><input type="date" class="tk-i" data-tkf="date:' + i + '" value="' + esc(it.date || '') + '"><input type="time" class="tk-i" data-tkf="time:' + i + '" value="' + esc(it.time || '') + '"></div><div class="row">' +
+                      o += '<div class="tk-ed"><div class="row"><button type="button" class="tk-pk" data-tkpk="item:date:' + i + '">' + tkDLabel(it.date) + '</button><button type="button" class="tk-pk" data-tkpk="item:time:' + i + '">' + tkTLabel(it.time) + '</button></div><div class="row">' +
                         TK_REPS.map(function (r) { return '<button type="button" class="chip" data-tkrep="' + i + ':' + r[0] + '" aria-pressed="' + ((it.rep || 'none') === r[0]) + '">' + r[1] + '</button>'; }).join('') +
                         '<button type="button" class="ghost" data-tkrr="' + i + '">Remove reminder</button></div></div>';
                     }
@@ -1387,6 +1483,18 @@ html:has(body.side-open) { overflow: hidden !important; }
                   return;
                 }
                 if (b.dataset.tkbell !== undefined) { tkBell(true); return; }
+                        if (b.dataset.tkpk) {
+                          var pkp = b.dataset.tkpk.split(':'), pkw = cur();
+                          if (!pkw) return;
+                          if (pkp[0] === 'draft') {
+                            var pkk = pkp[1] === 'date' ? 'dDate' : 'dTime';
+                            tkPick(pkp[1], pkw[pkk], function (v) { pkw[pkk] = v; if (v) pkw.dRem = true; tkSyncDraft(pkw); }, true);
+                          } else {
+                            var pki = pkw.items ? pkw.items[Number(pkp[2])] : null;
+                            if (pki) tkPick(pkp[1], pki[pkp[1]], function (v) { if (v) pki[pkp[1]] = v; renderWidgets(); renderPanel(); }, false);
+                          }
+                          return;
+                        }
                 if (b.dataset.tkperm !== undefined) { tkAskNotify(); return; }
         if (b.dataset.tkclr) {
           var tw3 = cur();
