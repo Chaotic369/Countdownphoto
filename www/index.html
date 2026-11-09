@@ -338,7 +338,20 @@ html:has(body.side-open) { overflow: hidden !important; }
 .si-x { display: grid; place-items: center; }
 .si-x:disabled { opacity: 0.3; cursor: default; }
 .si-x:not(:disabled):hover { background: var(--surface2); color: var(--fg); }
-.sd-f { margin-top: 16px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.sd-f { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); text-align: center; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.sd-h { padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.sd-g { width: 100%; border: 0; background: transparent; color: var(--muted); padding: 0 4px; margin: 16px 0 8px; gap: 8px; justify-content: flex-start; text-align: left; font-size: 11px; }
+.sd-gi { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; background: var(--surface2); color: var(--fg); font-size: 10px; letter-spacing: 0; text-transform: none; }
+.sd-gt { flex: 1; }
+.sd-g b { min-width: 22px; padding: 2px 7px; border-radius: 999px; background: var(--surface2); color: var(--fg); font-weight: 600; text-align: center; letter-spacing: 0; }
+.sd-gc { width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform 0.2s; margin: -3px 4px 0 2px; }
+.sd-g[aria-expanded="false"] .sd-gc { transform: rotate(-45deg); margin-top: 0; }
+.sd-e { margin: 0 0 8px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 12px; text-align: center; font-size: 12.5px; }
+.si { margin-bottom: 8px; }
+.si-b { padding: 10px 12px; border: 1px solid var(--line); }
+.si.on .si-b { border-color: transparent; }
+.si-x { opacity: 0.6; }
+.si-x:not(:disabled):hover { opacity: 1; }
 .w { --mono: 'Geist Mono', ui-monospace, monospace; }
 .sd-new { flex-wrap: wrap; }
 .sd-new button { flex: 1 1 28%; }
@@ -801,11 +814,15 @@ html:has(body.side-open) { overflow: hidden !important; }
 
   /* ---------- sidebar ---------- */
   var sideNew = false;
+    var sideCol = {};
   var ICO_DEL = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function sideName(x) { return ((x.type === 'text' ? x.text : x.label) || '').trim() || (x.type === 'text' ? 'Text' : x.type === 'photo' ? 'Photos' : x.type === 'tasks' ? 'Tasks' : 'Countdown'); }
   function sideSub(x) {
     if (x.type === 'count') { var tt = parseT(x.target); return tt.d + ' ' + MON[tt.m].slice(0, 3) + ' ' + tt.y + ', ' + p2(tt.hh) + ':' + p2(tt.mm); }
-    if (x.type === 'tasks') return (x.items || []).filter(function (i) { return i.d; }).length + ' / ' + (x.items || []).length + ' done';
+    if (x.type === 'tasks') {
+          var rc = (x.items || []).filter(function (i) { return i.rem && !i.d; }).length;
+          return (x.items || []).filter(function (i) { return i.d; }).length + ' / ' + (x.items || []).length + ' done' + (rc ? ' · ' + rc + ' reminder' + (rc === 1 ? '' : 's') : '');
+        }
         if (x.type === 'photo') return x.photos.length + ' photo' + (x.photos.length === 1 ? '' : 's') + ' · ' + (x.auto ? x.interval + 's' : 'manual');
     return x.font + ' · ' + x.size + 'px';
   }
@@ -816,14 +833,25 @@ html:has(body.side-open) { overflow: hidden !important; }
     ['text', 'count', 'photo', 'tasks'].forEach(function (t) {
       var all = S.w.filter(function (x) { return x.type === t; });
       var items = all;
-      h += '<div class="sd-g"><span>' + info[t][0] + '</span><b>' + all.length + '</b></div>';
-      if (!items.length) h += '<p class="sd-e">None yet</p>';
+      var colp = !!sideCol[t];
+            h += '<button type="button" class="sd-g" data-sg="' + t + '" aria-expanded="' + (!colp) + '"><span class="sd-gi">' + info[t][1] + '</span><span class="sd-gt">' + info[t][0] + '</span><b>' + all.length + '</b><span class="sd-gc"></span></button>';
+      if (colp) return;
+            if (!items.length) h += '<p class="sd-e">None yet</p>';
       items.forEach(function (x) {
         h += '<div class="si' + (x.id === S.sel ? ' on' : '') + '"><button type="button" class="si-b" data-pick="' + x.id + '"><span class="ki">' + info[t][1] + '</span><span class="si-w"><span class="si-t">' + esc(sideName(x)) + '</span><span class="si-s">' + esc(sideSub(x)) + '</span></span></button>' +
           '<button type="button" class="si-x" data-del="' + x.id + '" aria-label="Delete widget"' + (S.w.length < 2 ? ' disabled' : '') + '>' + ICO_DEL + '</button></div>';
       });
     });
     host.innerHTML = h;
+        if (!host._sg) {
+          host._sg = 1;
+          host.addEventListener('click', function (e) {
+            var g = e.target.closest ? e.target.closest('[data-sg]') : null;
+            if (!g) return;
+            sideCol[g.dataset.sg] = !sideCol[g.dataset.sg];
+            renderSide();
+          });
+        }
     var ft = $('#side-foot'); if (ft) ft.textContent = S.w.length + ' / 30 widgets';
     var nb = $('#side-new'); if (nb) nb.hidden = !sideNew;
     var pb = $('#side-plus'); if (pb) pb.setAttribute('aria-expanded', String(sideNew));
