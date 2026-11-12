@@ -558,6 +558,7 @@ html:has(body.side-open) { overflow: hidden !important; }
 .sh::after { display: none !important; }
 @media (max-width: 600px) { .sd-l > .sd-cat:last-child:nth-child(odd) { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: reduce) { .sd, .sd-ov { transition: none; } .pi { animation: none !important; } }
+*, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 </style>
 
 </head>
