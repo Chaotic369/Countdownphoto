@@ -538,6 +538,14 @@ html:has(body.side-open) { overflow: hidden !important; }
 .sd-iog .sd-io + .sd-io::before { content: ""; position: absolute; left: -3px; top: 9px; bottom: 9px; width: 1px; background: var(--line); }
 .sd-s .sd-ca { border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
 @media (max-width: 380px) { .sd-iog .sd-io span { display: none; } .sd-iog .sd-io { padding: 0 12px; } }
+/* buttons row moved below the list */
+.sd { display: flex; flex-direction: column; }
+.sd > * { flex: none; }
+.sd-h { order: 0; }
+.sd-new { order: 1; }
+.sd-l { order: 2; }
+.sd-s { order: 3; margin: 18px auto 0; }
+.sd-f { order: 4; }
 @media (prefers-reduced-motion: reduce) { .sd, .sd-ov { transition: none; } .pi { animation: none !important; } }
 </style>
 
