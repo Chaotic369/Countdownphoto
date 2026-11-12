@@ -47,6 +47,7 @@ object WidgetRenderer {
             "count" -> drawCount(ctx, c, cfg, w, h, d)
             "photo" -> drawPhoto(ctx, c, cfg, w, h, d)
                         "tasks" -> drawTasksNew(ctx, c, cfg, w, h, d)
+                                    "clock" -> drawClock(ctx, c, cfg, w, h, d)
             else -> drawHint(c, w, h, d)
         }
         return bmp
@@ -492,7 +493,111 @@ object WidgetRenderer {
         c.restore()
     }
 
-    /* ---------------- photo ---------------- */
+    /* ---------------- clock ---------------- */
+        private fun drawClock(ctx: Context, c: Canvas, cfg: WidgetConfig, aw: Int, ah: Int, d: Float) {
+            val sz = cfg.int("size", 56) * d
+            val fontName = cfg.str("font", "seg7")
+            val seg = fontName == "seg7"
+            val italic = cfg.bool("italic")
+            val fg = col(cfg.str("color", "#ffffff"))
+            val pad = cfg.int("pad", 20) * d
+            val showSeps = cfg.bool("seps", true)
+            val mono = "Geist Mono"
+
+            val now = java.time.LocalTime.now()
+            var hr = now.hour
+            var ap = ""
+            if (!cfg.bool("h24", true)) {
+                ap = if (hr < 12) "AM" else "PM"
+                hr = if (hr % 12 == 0) 12 else hr % 12
+            }
+            val parts = ArrayList<String>()
+            parts.add(String.format("%02d", hr))
+            parts.add(String.format("%02d", now.minute))
+            if (cfg.bool("showSec")) parts.add(String.format("%02d", now.second))
+
+            val num = TextPaint(Paint.ANTI_ALIAS_FLAG)
+            num.typeface = FontLoader.get(ctx, if (seg) mono else fontName, cfg.int("weight", 600), italic && !seg)
+            num.textSize = sz
+            num.color = fg
+
+            val digitGap = sz * 0.06f
+            fun pw(t: String): Float = if (seg) t.length * sz * SevenSegment.ASPECT + (t.length - 1) * digitGap else num.measureText(t)
+
+            val apP = TextPaint(Paint.ANTI_ALIAS_FLAG)
+            apP.typeface = FontLoader.get(ctx, mono, 500, italic)
+            apP.textSize = max(9f * d, sz * 0.3f)
+            apP.letterSpacing = 0.1f
+            apP.color = alphaOf(fg, 0.72f)
+            val apW = if (ap.isEmpty()) 0f else apP.measureText(ap)
+
+            val gap = 8f * d
+            val sepW = if (!showSeps) 0f else if (seg) sz * 0.2f else num.measureText(":")
+            var rowW = 0f
+            for (t in parts) rowW += pw(t)
+            rowW += (parts.size - 1) * (if (showSeps) sepW + 2 * gap else gap)
+            if (ap.isNotEmpty()) rowW += gap + apW
+
+            val title = if (cfg.bool("showTitle", false)) cfg.str("label").uppercase() else ""
+            val tp = TextPaint(Paint.ANTI_ALIAS_FLAG)
+            tp.typeface = FontLoader.get(ctx, if (seg) mono else fontName, 400, italic)
+            tp.textSize = max(11f * d, (sz * 0.32f).roundToInt().toFloat())
+            tp.letterSpacing = 0.08f
+            tp.color = fg
+            val titleW = if (title.isEmpty()) 0f else tp.measureText(title)
+            val titleBlock = if (title.isEmpty()) 0f else (tp.fontMetrics.descent - tp.fontMetrics.ascent) + 0.55f * tp.textSize
+
+            val contentW = max(rowW, titleW)
+            val cw = contentW + 2 * pad
+            val chH = titleBlock + sz + 2 * pad
+            val s = min(1f, min(aw / cw, ah / chH))
+
+            c.save()
+            c.translate((aw - cw * s) / 2f, (ah - chH * s) / 2f)
+            c.scale(s, s)
+            drawCard(c, cw, chH, cfg, d)
+            c.translate(pad, pad)
+
+            if (title.isNotEmpty()) {
+                c.drawText(title, (contentW - titleW) / 2f, -tp.fontMetrics.ascent, tp)
+            }
+            val sepPaint = TextPaint(num)
+            sepPaint.color = alphaOf(fg, 0.8f)
+            var x = (contentW - rowW) / 2f
+            val y0 = titleBlock
+            parts.forEachIndexed { i, t ->
+                if (seg) {
+                    t.forEachIndexed { j, chr ->
+                        SevenSegment.drawDigit(c, chr, x + j * (sz * SevenSegment.ASPECT + digitGap), y0, sz, fg, italic)
+                    }
+                } else {
+                    val fm = num.fontMetrics
+                    c.drawText(t, x, y0 + (sz - (fm.descent - fm.ascent)) / 2f - fm.ascent, num)
+                }
+                x += pw(t)
+                if (i < parts.size - 1) {
+                    if (showSeps) {
+                        x += gap
+                        if (seg) {
+                            SevenSegment.drawColon(c, x, y0, sz, alphaOf(fg, 0.8f), italic)
+                        } else {
+                            val fm = sepPaint.fontMetrics
+                            c.drawText(":", x, y0 + (sz - (fm.descent - fm.ascent)) / 2f - fm.ascent, sepPaint)
+                        }
+                        x += sepW + gap
+                    } else {
+                        x += gap
+                    }
+                }
+            }
+            if (ap.isNotEmpty()) {
+                x += gap
+                c.drawText(ap, x, y0 + sz - apP.fontMetrics.descent, apP)
+            }
+            c.restore()
+        }
+
+        /* ---------------- photo ---------------- */
     private fun drawPhoto(ctx: Context, c: Canvas, cfg: WidgetConfig, aw: Int, ah: Int, d: Float) {
         val wDp = cfg.int("width", 260)
         val hDp = cfg.int("height", 260)

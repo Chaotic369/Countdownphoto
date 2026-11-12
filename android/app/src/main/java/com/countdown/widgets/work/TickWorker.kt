@@ -59,7 +59,7 @@ object Ticker {
             watchScreen(ctx)
                     try {
                         if (!SecondsService.running && WidgetActions.allIds(ctx).any { id ->
-                                WidgetStore.forAppWidget(ctx, id)?.let { it.type == "count" && it.unit("seconds") } == true }) {
+                                WidgetStore.forAppWidget(ctx, id)?.let { (it.type == "count" && it.unit("seconds")) || (it.type == "clock" && it.bool("showSec")) } == true }) {
                             val si = Intent(ctx, SecondsService::class.java)
                             if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(si) else ctx.startService(si)
                         }
@@ -76,7 +76,10 @@ object Ticker {
                 "count" -> next = minOf(next,
                                     if (awake && cfg.unit("seconds") && !SecondsService.running) maxOf((now / 1_000L + 1) * 1_000L, now + 400L)
                                     else (now / 60_000L + 1) * 60_000L)
-                "photo" -> if (cfg.bool("auto", true) && !cfg.bool("paused") && cfg.photos.size > 1) {
+                "clock" -> next = minOf(next,
+                                    if (awake && cfg.bool("showSec") && !SecondsService.running) maxOf((now / 1_000L + 1) * 1_000L, now + 400L)
+                                    else (now / 60_000L + 1) * 60_000L)
+                                "photo" -> if (cfg.bool("auto", true) && !cfg.bool("paused") && cfg.photos.size > 1) {
                     next = minOf(next, maxOf(cfg.long("last", 0L) + cfg.int("interval", 5) * 1000L, now + minGap))
                 }
             }
@@ -104,8 +107,8 @@ object Ticker {
         val now = System.currentTimeMillis()
         for (id in WidgetActions.allIds(ctx)) {
             val cfg = WidgetStore.forAppWidget(ctx, id) ?: continue
-            if (cfg.type == "count") {
-                WidgetActions.update(ctx, mgr, id)
+            if (cfg.type == "count" || cfg.type == "clock") {
+                            WidgetActions.update(ctx, mgr, id)
             } else if (cfg.type == "photo" && due(cfg, now)) {
                 if (WidgetActions.photoStep(cfg, 1)) {
                     WidgetStore.save(ctx, cfg)
@@ -145,7 +148,7 @@ class SecondsService : Service() {
                 var any = false
                 for (id in WidgetActions.allIds(ctx)) {
                     val cfg = WidgetStore.forAppWidget(ctx, id) ?: continue
-                    if (cfg.type == "count" && cfg.unit("seconds")) {
+                    if ((cfg.type == "count" && cfg.unit("seconds")) || (cfg.type == "clock" && cfg.bool("showSec"))) {
                         any = true
                         WidgetActions.update(ctx, mgr, id)
                     }

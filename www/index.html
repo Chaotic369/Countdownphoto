@@ -444,6 +444,7 @@ html:has(body.side-open) { overflow: hidden !important; }
       <button type="button" data-add="count">88 &nbsp;Countdown</button>
       <button type="button" data-add="photo">Ph &nbsp;Photos</button>
             <button type="button" data-add="tasks">✓ &nbsp;Tasks</button>
+                  <button type="button" data-add="clock">🕒 &nbsp;Clock</button>
     </div>
     <div class="sd-s"><button type="button" class="sd-ca" id="side-ca">Collapse all</button></div>
         <div class="sd-l" id="side-list"></div>
@@ -531,7 +532,12 @@ html:has(body.side-open) { overflow: hidden !important; }
       bgOn: true, bg: '#0b0b0b', bgOpacity: 55, blur: 10, radius: 22, pad: 20, border: false, borderColor: '#ffb000', appWidgetId: 0 };
   }
 
-  function mkTasks() {
+  function mkClock() {
+      return { id: nid++, type: 'clock', label: 'Clock', showTitle: false, h24: false, showSec: false, seps: true,
+        font: 'seg7', size: 56, weight: 600, italic: false, color: '#ffffff',
+        bgOn: true, bg: '#0b0b0b', bgOpacity: 55, blur: 10, radius: 22, pad: 20, border: false, borderColor: '#ffb000', appWidgetId: 0 };
+    }
+    function mkTasks() {
       return { id: nid++, type: 'tasks', label: 'To-do', showTitle: true,
         lists: ['To-do'], ls: 0, rNotify: true, rSound: true, rVib: true, rLead: '0', dRem: false, dDate: '', dTime: '', dRep: 'none',
                 items: [{ i: 1, t: 'Plan the week', d: false, l: 0, rem: false }, { i: 2, t: 'Drink water', d: true, l: 0, rem: false }, { i: 3, t: 'Call a friend', d: false, l: 0, rem: false }],
@@ -822,9 +828,10 @@ html:has(body.side-open) { overflow: hidden !important; }
   var sideNew = false;
     var sideCol = {};
   var ICO_DEL = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  function sideName(x) { return ((x.type === 'text' ? x.text : x.label) || '').trim() || (x.type === 'text' ? 'Text' : x.type === 'photo' ? 'Photos' : x.type === 'tasks' ? 'Tasks' : 'Countdown'); }
+  function sideName(x) { return ((x.type === 'text' ? x.text : x.label) || '').trim() || (x.type === 'text' ? 'Text' : x.type === 'photo' ? 'Photos' : x.type === 'tasks' ? 'Tasks' : x.type === 'clock' ? 'Clock' : 'Countdown'); }
   function sideSub(x) {
-    if (x.type === 'count') { var tt = parseT(x.target); return tt.d + ' ' + MON[tt.m].slice(0, 3) + ' ' + tt.y + ', ' + p2(tt.hh) + ':' + p2(tt.mm); }
+    if (x.type === 'clock') return (x.h24 ? '24-hour' : '12-hour') + (x.showSec ? ' · seconds' : '');
+        if (x.type === 'count') { var tt = parseT(x.target); return tt.d + ' ' + MON[tt.m].slice(0, 3) + ' ' + tt.y + ', ' + p2(tt.hh) + ':' + p2(tt.mm); }
     if (x.type === 'tasks') {
           var rc = (x.items || []).filter(function (i) { return i.rem && !i.d; }).length;
           return (x.items || []).filter(function (i) { return i.d; }).length + ' / ' + (x.items || []).length + ' done' + (rc ? ' · ' + rc + ' reminder' + (rc === 1 ? '' : 's') : '');
@@ -834,9 +841,9 @@ html:has(body.side-open) { overflow: hidden !important; }
   }
   function renderSide() {
     var host = $('#side-list'); if (!host) return;
-    var info = { text: ['Text widgets', 'Aa'], count: ['Countdown widgets', '88'], photo: ['Photo widgets', 'Ph'], tasks: ['Task widgets', '✓'] };
+    var info = { text: ['Text widgets', 'Aa'], count: ['Countdown widgets', '88'], photo: ['Photo widgets', 'Ph'], tasks: ['Task widgets', '✓'], clock: ['Clock widgets', '🕒'] };
     var h = '';
-    ['text', 'count', 'photo', 'tasks'].forEach(function (t) {
+    ['text', 'count', 'photo', 'tasks', 'clock'].forEach(function (t) {
       var all = S.w.filter(function (x) { return x.type === t; });
             var items = all.slice()
               .sort(function (a, b) { return (b.appWidgetId ? 1 : 0) - (a.appWidgetId ? 1 : 0) || b.id - a.id; });
@@ -863,12 +870,12 @@ html:has(body.side-open) { overflow: hidden !important; }
         if (ca && !ca._b) {
           ca._b = 1;
           ca.addEventListener('click', function () {
-            var ks = ['text', 'count', 'photo', 'tasks'], anyOpen = ks.some(function (k) { return !sideCol[k]; });
+            var ks = ['text', 'count', 'photo', 'tasks', 'clock'], anyOpen = ks.some(function (k) { return !sideCol[k]; });
             ks.forEach(function (k) { sideCol[k] = anyOpen; });
             renderSide();
           });
         }
-        if (ca) ca.textContent = ['text', 'count', 'photo', 'tasks'].every(function (k) { return sideCol[k]; }) ? 'Expand all' : 'Collapse all';
+        if (ca) ca.textContent = ['text', 'count', 'photo', 'tasks', 'clock'].every(function (k) { return sideCol[k]; }) ? 'Expand all' : 'Collapse all';
         var ft = $('#side-foot');
         if (ft) ft.textContent = S.w.length + ' widget' + (S.w.length === 1 ? '' : 's') + ' · ' + S.w.filter(function (x) { return x.appWidgetId; }).length + ' on home screen';
     var nb = $('#side-new'); if (nb) nb.hidden = !sideNew;
@@ -1017,7 +1024,25 @@ html:has(body.side-open) { overflow: hidden !important; }
     h += '<div class="cd' + (w.italic && seg ? ' it' : '') + '" style="color:' + w.color + ';font-family:' + fam + ';font-weight:' + w.weight + ';' + (w.italic && !seg ? 'font-style:italic;' : '') + '">' + parts.join(sep) + '</div>';
     el.innerHTML = h;
   }
-  function fillTasks(el, w) {
+  function fillClock(el, w) {
+      var d = new Date(), hr = d.getHours(), ap = '', sz = w.size, seg = w.font === 'seg7';
+      var fam = FONTS[w.font] || FONTS['Orbitron'];
+      if (!w.h24) { ap = hr < 12 ? 'AM' : 'PM'; hr = hr % 12 || 12; }
+      var vals = [tkp(hr), tkp(d.getMinutes())];
+      if (w.showSec) vals.push(tkp(d.getSeconds()));
+      var h = '';
+      if (w.showTitle && w.label) h += '<div class="cl" style="font-size:' + Math.max(11, Math.round(sz * 0.32)) + 'px;font-family:' + (seg ? 'var(--mono)' : fam) + ';font-style:' + (w.italic ? 'italic' : 'normal') + ';color:' + w.color + '">' + esc(w.label) + '</div>';
+      var parts = vals.map(function (v) {
+        var num = seg ? '<div class="num">' + v.split('').map(function (c) { return dg(c, sz); }).join('') + '</div>'
+                      : '<div class="num" style="font-size:' + sz + 'px">' + v + '</div>';
+        return '<div class="u">' + num + '</div>';
+      });
+      var sep = w.seps ? '<div class="sep" style="font-size:' + sz + 'px">' + (seg ? colon(sz) : ':') + '</div>' : '';
+      var apH = ap ? '<div class="u"><div class="lab" style="font-size:' + Math.max(9, Math.round(sz * 0.3)) + 'px;margin-left:8px">' + ap + '</div></div>' : '';
+      h += '<div class="cd' + (w.italic && seg ? ' it' : '') + '" style="color:' + w.color + ';font-family:' + fam + ';font-weight:' + w.weight + ';' + (w.italic && !seg ? 'font-style:italic;' : '') + '">' + parts.join(sep) + apH + '</div>';
+      el.innerHTML = h;
+    }
+    function fillTasks(el, w) {
       var fam = FONTS[w.font] || FONTS['Instrument Sans'];
       var jc = w.align === 'center' ? 'center' : w.align === 'right' ? 'flex-end' : 'flex-start';
       var st = 'font-family:' + fam + ';font-weight:' + w.weight + ';font-size:' + w.size + 'px;color:' + w.color + ';letter-spacing:' + w.spacing + 'px;width:' + w.width + 'px;' + (w.italic ? 'font-style:italic;' : '');
@@ -1046,7 +1071,7 @@ html:has(body.side-open) { overflow: hidden !important; }
         s.fontFamily = FONTS[w.font] || FONTS['Fraunces']; s.fontSize = w.size + 'px'; s.fontWeight = w.weight;
         s.fontStyle = w.italic ? 'italic' : 'normal'; s.color = w.color; s.textAlign = w.align; s.letterSpacing = w.spacing + 'px';
         el.appendChild(t);
-      } else if (w.type === 'tasks') { fillTasks(el, w); } else { fill(el, w); }
+      } else if (w.type === 'tasks') { fillTasks(el, w); } else if (w.type === 'clock') { fillClock(el, w); } else { fill(el, w); }
       host.appendChild(el);
     });
     persist();
@@ -1120,7 +1145,7 @@ html:has(body.side-open) { overflow: hidden !important; }
     return out + '</div>';
   }
   function kindsHTML() {
-    var info = { text: ['Text', 'Words only', 'Aa'], count: ['Countdown', 'Live timer, optional title', '88'], photo: ['Photos', 'Slideshow of your pictures', 'Ph'], tasks: ['Tasks', 'Checklist you can tick off', '✓'] };
+    var info = { text: ['Text', 'Words only', 'Aa'], count: ['Countdown', 'Live timer, optional title', '88'], photo: ['Photos', 'Slideshow of your pictures', 'Ph'], tasks: ['Tasks', 'Checklist you can tick off', '✓'], clock: ['Clock', 'Digital clock for your home screen', '🕒'] };
     return '<div class="kinds" role="group" aria-label="Widget type">' + S.w.map(function (x) {
       return '<button class="kind" data-sel="' + x.id + '" aria-pressed="' + (x.id === S.sel) + '"><span class="ki">' + info[x.type][2] + '</span><span class="kt">' + info[x.type][0] + '</span><span class="ks">' + info[x.type][1] + '</span></button>';
     }).join('') + '</div>';
@@ -1130,7 +1155,7 @@ html:has(body.side-open) { overflow: hidden !important; }
   function renderPanel(focusQ) {
     var w = cur(), p = $('#panel');
     if (!w) { p.innerHTML = '<p class="hint">Add a widget to start.</p>'; return; }
-    var cnt = w.type === 'count';
+    var cnt = w.type === 'count' || w.type === 'clock';
 
     function rng(k, l, min, max, step, u) {
       return '<div class="f"><div class="fh"><label for="c-' + k + '">' + l + '</label><output id="o-' + k + '">' + w[k] + u + '</output></div>' +
@@ -1292,8 +1317,14 @@ html:has(body.side-open) { overflow: hidden !important; }
         else if (w.type === 'tasks' && S.tab === 'content') { c = tasksPanel(); }
                 else if (w.type === 'tasks' && S.tab === 'rem') { c = remPanel(); }
     else if (S.tab === 'content') {
-      if (!cnt) {
-        c += '<div class="f"><label for="c-text">Text</label><textarea id="c-text" data-k="text" rows="3">' + esc(w.text) + '</textarea></div>';
+      if (w.type === 'clock') {
+              c += sh('Title');
+              c += chk('showTitle', 'Show title text above the clock');
+              c += '<div class="f"><label for="c-label">Title text</label><input type="text" id="c-label" data-k="label" value="' + esc(w.label) + '"' + (w.showTitle ? '' : ' disabled') + '></div>';
+              c += sh('Time');
+              c += '<div class="tg">' + chk('h24', '24-hour time') + chk('showSec', 'Show seconds') + chk('seps', 'Separators') + '</div>';
+            } else if (!cnt) {
+              c += '<div class="f"><label for="c-text">Text</label><textarea id="c-text" data-k="text" rows="3">' + esc(w.text) + '</textarea></div>';
 
       } else {
         c += sh('Title');
@@ -1567,7 +1598,7 @@ html:has(body.side-open) { overflow: hidden !important; }
     if (b.dataset.sel) { S.sel = Number(b.dataset.sel); S.dd = false; S.cp = null; S.dt = false; renderWidgets(); renderPanel(q); return; }
     if (b.dataset.tab) { S.tab = b.dataset.tab; S.dd = false; S.cp = null; S.dt = false; renderPanel(q); return; }
     if (b.dataset.add) {
-      var nw = b.dataset.add === 'text' ? mkText() : b.dataset.add === 'photo' ? mkPhoto() : b.dataset.add === 'tasks' ? mkTasks() : mkCount();
+      var nw = b.dataset.add === 'text' ? mkText() : b.dataset.add === 'photo' ? mkPhoto() : b.dataset.add === 'tasks' ? mkTasks() : b.dataset.add === 'clock' ? mkClock() : mkCount();
       S.w.push(nw); S.sel = nw.id; S.tab = 'content'; S.dd = false; S.cp = null; S.dt = false; renderWidgets(); renderPanel(); toggleSide(false); return;
     }
     if (b.hasAttribute('data-remove')) {
@@ -1641,7 +1672,7 @@ html:has(body.side-open) { overflow: hidden !important; }
     if (ctx.mode === 'config' && ctx.appWidgetId) {
       var ex = S.w.filter(function (x) { return x.appWidgetId === ctx.appWidgetId; })[0];
       if (!ex) {
-        ex = ctx.type === 'photo' ? mkPhoto() : ctx.type === 'count' ? mkCount() : ctx.type === 'tasks' ? mkTasks() : mkText();
+        ex = ctx.type === 'photo' ? mkPhoto() : ctx.type === 'count' ? mkCount() : ctx.type === 'tasks' ? mkTasks() : ctx.type === 'clock' ? mkClock() : mkText();
         ex.appWidgetId = ctx.appWidgetId; S.w.push(ex);
       }
       S.sel = ex.id;
@@ -1670,7 +1701,11 @@ html:has(body.side-open) { overflow: hidden !important; }
         if (photoStep(pw, 1)) { fillPhoto(el, pw, true); persist(); } else pw.last = Date.now();
       }
     });
-    document.querySelectorAll('.w[data-type="count"]').forEach(function (el) {
+    document.querySelectorAll('.w[data-type="clock"]').forEach(function (el) {
+          var cw = S.w.filter(function (x) { return x.id === Number(el.dataset.id); })[0];
+          if (cw) fillClock(el, cw);
+        });
+        document.querySelectorAll('.w[data-type="count"]').forEach(function (el) {
       var w = S.w.filter(function (x) { return x.id === Number(el.dataset.id); })[0];
       if (w) fill(el, w);
     });

@@ -109,7 +109,19 @@
                             android:name=".work.ReminderReceiver"
                             android:exported="false" />
 
-                        <!-- Boot / package replaced / minute tick -->
+                        <receiver
+                                    android:name=".widgets.ClockWidgetProvider"
+                                    android:exported="true"
+                                    android:label="@string/widget_clock_name">
+                                    <intent-filter>
+                                        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                                    </intent-filter>
+                                    <meta-data
+                                        android:name="android.appwidget.provider"
+                                        android:resource="@xml/text_widget_info" />
+                                </receiver>
+
+                                <!-- Boot / package replaced / minute tick -->
         <receiver
             android:name=".work.BootReceiver"
             android:exported="true">

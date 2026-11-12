@@ -26,7 +26,7 @@ object WidgetActions {
 
     private val PROVIDERS = listOf(
         TextWidgetProvider::class.java, CountdownWidgetProvider::class.java, PhotoWidgetProvider::class.java,
-                TasksWidgetProvider::class.java)
+                TasksWidgetProvider::class.java, ClockWidgetProvider::class.java)
 
     fun allIds(ctx: Context): List<Int> {
         val m = AppWidgetManager.getInstance(ctx)
@@ -37,6 +37,7 @@ object WidgetActions {
         "photo" -> PhotoWidgetProvider::class.java
         "count" -> CountdownWidgetProvider::class.java
                 "tasks" -> TasksWidgetProvider::class.java
+                        "clock" -> ClockWidgetProvider::class.java
         else -> TextWidgetProvider::class.java
     }
 
@@ -46,6 +47,7 @@ object WidgetActions {
             cn.endsWith("PhotoWidgetProvider") -> "photo"
             cn.endsWith("CountdownWidgetProvider") -> "count"
                         cn.endsWith("TasksWidgetProvider") -> "tasks"
+                                    cn.endsWith("ClockWidgetProvider") -> "clock"
             else -> "text"
         }
     }

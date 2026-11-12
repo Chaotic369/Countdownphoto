@@ -9,4 +9,6 @@
     <string name="widget_countdown_desc">Counts down to a date and time with digital digits.</string>
         <string name="widget_tasks_name">Tasks</string>
         <string name="widget_tasks_desc">A checklist with your own font, colors and card.</string>
+                <string name="widget_clock_name">Clock</string>
+                <string name="widget_clock_desc">A digital clock with your own font, colors and card.</string>
 </resources>
