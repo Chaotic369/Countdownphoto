@@ -463,6 +463,17 @@ html:has(body.side-open) { overflow: hidden !important; }
 .sd-l .si-s { font-size: 10.5px; }
 .sd-l .si-x, .sd-l .si.on .si-x { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border-radius: 9px; background: rgba(0, 0, 0, 0.5); color: #fff; opacity: 1; }
 .sd-l .si-p { position: absolute; top: 12px; left: 12px; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45); }
+/* columns + icon-only headers */
+.sd > * { max-width: 1100px; }
+.sd-l { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: start; }
+.sd-items { grid-template-columns: 1fr; }
+.sd-cat { padding: 10px; border-radius: 20px; }
+.sd-cat .sd-g { gap: 8px; padding: 2px 2px 6px; }
+.sd-cat .sd-gi { width: 34px; height: 34px; border-radius: 11px; }
+.sd-cat .sd-g b { margin-left: auto; }
+.sd-plus { width: 42px; height: 42px; padding: 0; justify-content: center; border-radius: 14px; }
+.sd-ca { display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border-radius: 14px; }
+.sd-new button { display: grid; place-items: center; padding: 16px 10px; }
 @media (prefers-reduced-motion: reduce) { .sd, .sd-ov { transition: none; } .pi { animation: none !important; } }
 </style>
 
@@ -482,15 +493,15 @@ html:has(body.side-open) { overflow: hidden !important; }
   <aside class="sd" id="side" aria-label="Widgets">
     <div class="sd-h">
       <b>Widgets</b>
-      <button type="button" class="sd-plus" id="side-plus" data-newtoggle="1" aria-label="New widget" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg><span>New widget</span></button>
+      <button type="button" class="sd-plus" id="side-plus" data-newtoggle="1" aria-label="New widget" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg></button>
       <button type="button" class="sd-c" data-side="close" aria-label="Close sidebar">×</button>
     </div>
     <div class="sd-new" id="side-new" hidden>
-      <button type="button" data-add="text">Aa &nbsp;Text</button>
-      <button type="button" data-add="count">88 &nbsp;Countdown</button>
-      <button type="button" data-add="photo">Ph &nbsp;Photos</button>
-            <button type="button" data-add="tasks">✓ &nbsp;Tasks</button>
-                  <button type="button" data-add="clock">🕒 &nbsp;Clock</button>
+      <button type="button" data-add="text" aria-label="Text" title="Text"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7V5h14v2M12 5v14M9 19h6"/></svg></button>
+      <button type="button" data-add="count" aria-label="Countdown" title="Countdown"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12M6 21h12M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/></svg></button>
+      <button type="button" data-add="photo" aria-label="Photos" title="Photos"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M4 18l5-5 4 4 3-3 4 4"/></svg></button>
+            <button type="button" data-add="tasks" aria-label="Tasks" title="Tasks"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.5l3 3 5-6"/></svg></button>
+                  <button type="button" data-add="clock" aria-label="Clock" title="Clock"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button>
     </div>
     <div class="sd-s"><button type="button" class="sd-ca" id="side-ca">Collapse all</button></div>
         <div class="sd-l" id="side-list"></div>
@@ -885,7 +896,15 @@ html:has(body.side-open) { overflow: hidden !important; }
         if (x.type === 'photo') return x.photos.length + ' photo' + (x.photos.length === 1 ? '' : 's') + ' · ' + (x.auto ? x.interval + 's' : 'manual');
     return x.font + ' · ' + x.size + 'px';
   }
-  function sidePrev(x) {
+  function ico(p) { return '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>'; }
+    var CAT_ICO = {
+      text: ico('<path d="M5 7V5h14v2M12 5v14M9 19h6"/>'),
+      count: ico('<path d="M6 3h12M6 21h12M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/>'),
+      photo: ico('<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M4 18l5-5 4 4 3-3 4 4"/>'),
+      tasks: ico('<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.5l3 3 5-6"/>'),
+      clock: ico('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>')
+    };
+    function sidePrev(x) {
       var fam = x.font === 'seg7' ? "'Geist Mono',ui-monospace,monospace" : (FONTS[x.font] || FONTS['Instrument Sans']), c = '', st;
       if (x.type === 'photo') {
         var p0 = x.photos && x.photos[x.idx || 0];
@@ -918,7 +937,7 @@ html:has(body.side-open) { overflow: hidden !important; }
     }
     function renderSide() {
     var host = $('#side-list'); if (!host) return;
-    var info = { text: ['Text widgets', 'Aa'], count: ['Countdown widgets', '88'], photo: ['Photo widgets', 'Ph'], tasks: ['Task widgets', '✓'], clock: ['Clock widgets', '🕒'] };
+    var info = { text: ['Text widgets', CAT_ICO.text], count: ['Countdown widgets', CAT_ICO.count], photo: ['Photo widgets', CAT_ICO.photo], tasks: ['Task widgets', CAT_ICO.tasks], clock: ['Clock widgets', CAT_ICO.clock] };
     var h = '';
     ['text', 'count', 'photo', 'tasks', 'clock'].forEach(function (t) {
       var all = S.w.filter(function (x) { return x.type === t; });
@@ -926,12 +945,12 @@ html:has(body.side-open) { overflow: hidden !important; }
               .sort(function (a, b) { return (b.appWidgetId ? 1 : 0) - (a.appWidgetId ? 1 : 0) || b.id - a.id; });
       var colp = !!sideCol[t];
             h += '<div class="sd-cat">';
-                        h += '<button type="button" class="sd-g" data-sg="' + t + '" aria-expanded="' + (!colp) + '"><span class="sd-gi">' + info[t][1] + '</span><span class="sd-gt">' + info[t][0] + '</span><b>' + all.length + '</b><span class="sd-gc"></span></button>';
+                        h += '<button type="button" class="sd-g" data-sg="' + t + '" aria-label="' + info[t][0] + '" title="' + info[t][0] + '" aria-expanded="' + (!colp) + '"><span class="sd-gi">' + info[t][1] + '</span><b>' + all.length + '</b><span class="sd-gc"></span></button>';
       if (colp) { h += '</div>'; return; }
             h += '<div class="sd-items">';
                         if (!items.length) h += '<p class="sd-e">None yet</p>';
       items.forEach(function (x) {
-        h += '<div class="si' + (x.id === S.sel ? ' on' : '') + '"><button type="button" class="si-b" data-pick="' + x.id + '">' + sidePrev(x) + '<span class="si-w"><span class="si-t">' + esc(sideName(x)) + '</span><span class="si-s">' + esc(sideSub(x)) + '</span></span>' + (x.appWidgetId ? '<span class="si-p" title="On home screen"></span>' : '') + '</button>' +
+        h += '<div class="si' + (x.id === S.sel ? ' on' : '') + '"><button type="button" class="si-b" data-pick="' + x.id + '">' + sidePrev(x) + '<span class="si-w"><span class="si-t">' + esc(sideName(x)) + '</span></span>' + (x.appWidgetId ? '<span class="si-p" title="On home screen"></span>' : '') + '</button>' +
           '<button type="button" class="si-x" data-del="' + x.id + '" aria-label="Delete widget"' + (S.w.length < 2 ? ' disabled' : '') + '>' + ICO_DEL + '</button></div>';
       });
             h += '</div></div>';
@@ -955,7 +974,12 @@ html:has(body.side-open) { overflow: hidden !important; }
             renderSide();
           });
         }
-        if (ca) ca.textContent = ['text', 'count', 'photo', 'tasks', 'clock'].every(function (k) { return sideCol[k]; }) ? 'Expand all' : 'Collapse all';
+        if (ca) {
+                  var allC = ['text', 'count', 'photo', 'tasks', 'clock'].every(function (k) { return sideCol[k]; });
+                  ca.setAttribute('aria-label', allC ? 'Expand all' : 'Collapse all');
+                  ca.title = allC ? 'Expand all' : 'Collapse all';
+                  ca.innerHTML = allC ? ico('<path d="M7 9l5-5 5 5M7 15l5 5 5-5"/>') : ico('<path d="M7 5l5 5 5-5M7 19l5-5 5 5"/>');
+                }
         var ft = $('#side-foot');
         if (ft) ft.textContent = S.w.length + ' widget' + (S.w.length === 1 ? '' : 's') + ' · ' + S.w.filter(function (x) { return x.appWidgetId; }).length + ' on home screen';
     var nb = $('#side-new'); if (nb) nb.hidden = !sideNew;
