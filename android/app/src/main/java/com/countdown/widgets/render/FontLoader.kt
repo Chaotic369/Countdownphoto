@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Typeface
 import android.os.Build
 import androidx.core.content.res.ResourcesCompat
+import java.io.File
 
 /**
  * Loads fonts from res/font by name. Missing font files fall back to a system family,
@@ -17,6 +18,34 @@ object FontLoader {
         "Audiowide" to "audiowide", "Oxanium" to "oxanium", "Geist Mono" to "geist_mono"
     )
     private val cache = HashMap<String, Typeface>()
+        private val vcache = HashMap<String, Typeface>()
+
+        /** Variable fonts: apply the wght axis directly so every slider weight renders like the editor. */
+        @Synchronized
+        private fun variable(ctx: Context, name: String, weight: Int, italic: Boolean): Typeface? {
+            if (Build.VERSION.SDK_INT < 26) return null
+            val res = RES[name] ?: return null
+            val key = name + "@" + weight + (if (italic) "i" else "")
+            vcache[key]?.let { return it }
+            return try {
+                val id = ctx.resources.getIdentifier(res, "font", ctx.packageName)
+                if (id == 0) return null
+                val f = File(ctx.cacheDir, "font_$res.ttf")
+                if (!f.exists() || f.length() == 0L) {
+                    ctx.resources.openRawResource(id).use { i -> f.outputStream().use { o -> i.copyTo(o) } }
+                }
+                val w = weight.coerceIn(1, 1000)
+                val tf = Typeface.Builder(f)
+                    .setFontVariationSettings("'wght' $w")
+                    .setWeight(w)
+                    .setItalic(italic)
+                    .build()
+                if (tf != null) vcache[key] = tf
+                tf
+            } catch (e: Throwable) {
+                null
+            }
+        }
 
     private fun fallback(name: String): Typeface = when (name) {
         "Fraunces", "Playfair Display", "Lora" -> Typeface.SERIF
@@ -34,7 +63,8 @@ object FontLoader {
 
     fun get(ctx: Context, name: String, weight: Int, italic: Boolean): Typeface {
         val b = base(ctx, name)
-        return if (Build.VERSION.SDK_INT >= 28) {
+                variable(ctx, name, weight, italic)?.let { return it }
+                return if (Build.VERSION.SDK_INT >= 28) {
             Typeface.create(b, weight.coerceIn(1, 1000), italic)
         } else {
             val bold = weight >= 600
