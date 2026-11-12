@@ -15,7 +15,11 @@ object FontLoader {
         "Instrument Sans" to "instrument_sans", "Fraunces" to "fraunces", "Playfair Display" to "playfair_display",
         "Lora" to "lora", "Caveat" to "caveat", "Bebas Neue" to "bebas_neue", "Space Mono" to "space_mono",
         "Orbitron" to "orbitron", "VT323" to "vt323", "Share Tech Mono" to "share_tech_mono",
-        "Audiowide" to "audiowide", "Oxanium" to "oxanium", "Geist Mono" to "geist_mono"
+        "Audiowide" to "audiowide", "Oxanium" to "oxanium", "Geist Mono" to "geist_mono",
+                "Inter" to "inter", "Poppins" to "poppins", "Montserrat" to "montserrat", "Roboto" to "roboto",
+                "Nunito" to "nunito", "DM Sans" to "dm_sans", "Manrope" to "manrope", "Oswald" to "oswald",
+                "Merriweather" to "merriweather", "JetBrains Mono" to "jetbrains_mono", "Roboto Mono" to "roboto_mono",
+                "Rajdhani" to "rajdhani"
     )
     private val cache = HashMap<String, Typeface>()
         private val vcache = HashMap<String, Typeface>()
@@ -48,9 +52,9 @@ object FontLoader {
         }
 
     private fun fallback(name: String): Typeface = when (name) {
-        "Fraunces", "Playfair Display", "Lora" -> Typeface.SERIF
+        "Fraunces", "Playfair Display", "Lora", "Merriweather" -> Typeface.SERIF
         "Caveat" -> Typeface.create("cursive", Typeface.NORMAL)
-        "Space Mono", "VT323", "Share Tech Mono", "Geist Mono" -> Typeface.MONOSPACE
+        "Space Mono", "VT323", "Share Tech Mono", "Geist Mono", "JetBrains Mono", "Roboto Mono" -> Typeface.MONOSPACE
         else -> Typeface.SANS_SERIF
     }
 
