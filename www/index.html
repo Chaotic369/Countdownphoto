@@ -479,7 +479,7 @@ html:has(body.side-open) { overflow: hidden !important; }
 .sd-new button::after { content: attr(aria-label); font-size: 11px; font-weight: 500; opacity: 0.75; }
 .sd-cat .sd-gt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; }
 /* sidebar polish */
-.sd { background: radial-gradient(120% 50% at 50% 0%, color-mix(in srgb, var(--accent) 7%, var(--bg)) 0%, var(--bg) 70%); scroll-behavior: smooth; }
+.sd { background: var(--bg); scroll-behavior: smooth; }
 .sd-h { position: sticky; top: 0; z-index: 5; margin-top: calc(-14px - env(safe-area-inset-top, 0px)); padding-top: calc(18px + env(safe-area-inset-top, 0px)); padding-bottom: 14px; background: color-mix(in srgb, var(--bg) 85%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 .sd-h b { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; }
 .sd-plus { transition: transform 0.15s; }
