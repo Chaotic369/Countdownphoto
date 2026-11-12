@@ -183,7 +183,11 @@ object WidgetRenderer {
             val align = cfg.str("align", "left")
             val strike = cfg.bool("strike", true)
             val showDet = cfg.bool("showDet", true)
-            val contentW = max(40f, aw - 2 * g.pad)
+            val cardW = min(aw.toFloat(), (cfg.int("width", 240) + 2 * cfg.int("pad", 18)) * d)
+                        val offX = (aw - cardW) / 2f
+                        val contentW = max(40f, cardW - 2 * g.pad)
+                        val endY = if (g.rows.isEmpty() && g.more == 0) g.firstTop + g.rowH else g.moreTop + (if (g.more > 0) sz * 1.4f else 0f)
+                        val cardH = min(ah.toFloat(), endY + g.pad)
 
             val txt = TextPaint(Paint.ANTI_ALIAS_FLAG)
             txt.typeface = FontLoader.get(ctx, fontName, cfg.int("weight", 500), italic)
@@ -211,9 +215,10 @@ object WidgetRenderer {
             lineP.strokeWidth = max(1f * d, sz * 0.07f)
             lineP.color = alphaOf(fg, 0.5f)
 
-            drawCard(c, aw.toFloat(), ah.toFloat(), cfg, d)
             c.save()
-            c.translate(g.pad, 0f)
+                        c.translate(offX, 0f)
+                        drawCard(c, cardW, cardH, cfg, d)
+                        c.translate(g.pad, 0f)
 
             if (g.title.isNotEmpty()) {
                 val tt = TextUtils.ellipsize(g.title, head, contentW, TextUtils.TruncateAt.END).toString()
