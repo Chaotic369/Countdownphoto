@@ -476,6 +476,42 @@ html:has(body.side-open) { overflow: hidden !important; }
 .sd-new button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 14px 8px; }
 .sd-new button::after { content: attr(aria-label); font-size: 11px; font-weight: 500; opacity: 0.75; }
 .sd-cat .sd-gt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; }
+/* sidebar polish */
+.sd { background: radial-gradient(120% 50% at 50% 0%, color-mix(in srgb, var(--accent) 7%, var(--bg)) 0%, var(--bg) 70%); scroll-behavior: smooth; }
+.sd-h { position: sticky; top: 0; z-index: 5; margin-top: calc(-14px - env(safe-area-inset-top, 0px)); padding-top: calc(18px + env(safe-area-inset-top, 0px)); padding-bottom: 14px; background: color-mix(in srgb, var(--bg) 85%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.sd-h b { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; }
+.sd-plus { box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent); transition: transform 0.15s; }
+.sd-plus:active, .sd-c:active, .sd-ca:active, .sd-cat:active { transform: scale(0.96); }
+.sd-c, .sd-ca { transition: background 0.15s, transform 0.15s; }
+.sd-c:hover, .sd-ca:hover { background: var(--line); }
+.sd-new { box-shadow: var(--shadow); grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); animation: sdIn 0.2s ease; }
+.sd-new button { transition: background 0.15s, color 0.15s, transform 0.15s; }
+.sd-new button:hover { background: var(--accent); color: var(--accent-fg); }
+.sd-new button:hover::after { opacity: 1; }
+.sd-new button:active { transform: scale(0.94); }
+.sd-s { margin: 14px 0 2px; }
+.sd-l { gap: 12px; padding-top: 6px; }
+.sd-cat { box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; animation: sdIn 0.25s ease both; }
+.sd-cat:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.sd-cat .sd-g { padding: 4px 2px; cursor: pointer; }
+.sd-cat .sd-gi { background: color-mix(in srgb, var(--accent) 14%, var(--surface2)); color: var(--accent); }
+.sd-cat .sd-g b { background: var(--accent); color: var(--accent-fg); min-width: 24px; padding: 2px 8px; font-size: 11px; }
+.sd-cat .sd-gt { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; color: var(--fg); }
+.sd-cat:has(.sd-items) { grid-column: 1 / -1; }
+.sd-cat:has(.sd-items) .sd-g { padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.sd-items { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; padding-top: 2px; }
+.sd-l .si { border-radius: 18px; padding: 7px; transition: transform 0.15s, box-shadow 0.15s; }
+.sd-l .si:hover { transform: translateY(-2px); }
+.sd-l .si.on { box-shadow: inset 0 0 0 2px var(--accent), 0 8px 20px -10px color-mix(in srgb, var(--accent) 70%, transparent); }
+.sp { height: 88px; border-radius: 13px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.sd-l .si-w { padding: 2px 4px 4px; }
+.sd-l .si-t { font-size: 13px; font-weight: 600; }
+.sd-l .si-x, .sd-l .si.on .si-x { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: background 0.15s; }
+.sd-l .si-x:not(:disabled):hover { background: #e5484d; }
+.sd-l .si-p { background: #3ecf6e; }
+.sd-f { position: sticky; bottom: 0; z-index: 4; width: auto !important; max-width: none; margin: 18px auto 0; padding: 9px 18px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--surface) 90%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: var(--shadow); }
+@keyframes sdIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .sd-cat, .sd-new { animation: none; } }
 @media (prefers-reduced-motion: reduce) { .sd, .sd-ov { transition: none; } .pi { animation: none !important; } }
 </style>
 
