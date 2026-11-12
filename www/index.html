@@ -473,7 +473,9 @@ html:has(body.side-open) { overflow: hidden !important; }
 .sd-cat .sd-g b { margin-left: auto; }
 .sd-plus { width: 42px; height: 42px; padding: 0; justify-content: center; border-radius: 14px; }
 .sd-ca { display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border-radius: 14px; }
-.sd-new button { display: grid; place-items: center; padding: 16px 10px; }
+.sd-new button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 14px 8px; }
+.sd-new button::after { content: attr(aria-label); font-size: 11px; font-weight: 500; opacity: 0.75; }
+.sd-cat .sd-gt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; }
 @media (prefers-reduced-motion: reduce) { .sd, .sd-ov { transition: none; } .pi { animation: none !important; } }
 </style>
 
@@ -945,7 +947,7 @@ html:has(body.side-open) { overflow: hidden !important; }
               .sort(function (a, b) { return (b.appWidgetId ? 1 : 0) - (a.appWidgetId ? 1 : 0) || b.id - a.id; });
       var colp = !!sideCol[t];
             h += '<div class="sd-cat">';
-                        h += '<button type="button" class="sd-g" data-sg="' + t + '" aria-label="' + info[t][0] + '" title="' + info[t][0] + '" aria-expanded="' + (!colp) + '"><span class="sd-gi">' + info[t][1] + '</span><b>' + all.length + '</b><span class="sd-gc"></span></button>';
+                        h += '<button type="button" class="sd-g" data-sg="' + t + '" aria-label="' + info[t][0] + '" title="' + info[t][0] + '" aria-expanded="' + (!colp) + '"><span class="sd-gi">' + info[t][1] + '</span><span class="sd-gt">' + info[t][0].replace(' widgets', '') + '</span><b>' + all.length + '</b><span class="sd-gc"></span></button>';
       if (colp) { h += '</div>'; return; }
             h += '<div class="sd-items">';
                         if (!items.length) h += '<p class="sd-e">None yet</p>';
@@ -990,6 +992,7 @@ html:has(body.side-open) { overflow: hidden !important; }
     s.classList.toggle('open', o); v.classList.toggle('open', o);
     document.body.classList.toggle('side-open', o);
     if (!o) sideNew = false;
+        if (o) ['text', 'count', 'photo', 'tasks', 'clock'].forEach(function (k) { sideCol[k] = true; });
     renderSide();
   }
 
