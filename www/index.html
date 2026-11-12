@@ -514,6 +514,30 @@ html:has(body.side-open) { overflow: hidden !important; }
 .sd-f { position: sticky; bottom: 0; z-index: 4; width: auto !important; max-width: none; margin: 18px auto 0; padding: 9px 18px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--surface) 90%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: var(--shadow); }
 @keyframes sdIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .sd-cat, .sd-new { animation: none; } }
+/* import / export */
+.sd-s { gap: 8px; align-items: center; }
+.sd-io { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; padding: 0 14px; height: 42px; background: var(--surface2); color: var(--fg); font-size: 12.5px; font-weight: 500; transition: background 0.15s, transform 0.15s; }
+.sd-io:hover { background: var(--line); }
+.sd-io:active { transform: scale(0.96); }
+.sd-s .sd-io:first-child { margin-right: auto; }
+.io-ov { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, 0.55); }
+.io-c { width: min(560px, 100%); max-height: 90vh; display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 22px; background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
+.io-h { display: flex; align-items: center; justify-content: space-between; }
+.io-h b { font-size: 18px; }
+.io-x { width: 34px; height: 34px; border: 0; border-radius: 10px; background: var(--surface2); color: var(--fg); font-size: 20px; line-height: 1; padding: 0; }
+.io-p { margin: 0; font-size: 12.5px; color: var(--muted); }
+.io-c textarea { width: 100%; min-height: 220px; flex: 1; resize: vertical; border: 0; border-radius: 14px; padding: 12px; background: var(--surface2); color: var(--fg); font-family: var(--mono); font-size: 11.5px; line-height: 1.5; }
+.io-f { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.io-ok { border: 0; border-radius: 12px; padding: 9px 18px; background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+/* import / export group */
+.sd-iog { display: inline-flex; align-items: center; gap: 0; margin-right: auto; padding: 3px; height: 42px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+.sd-iog .sd-io { height: 34px; padding: 0 14px; border-radius: 11px; background: transparent; color: var(--fg); font-size: 12.5px; font-weight: 600; letter-spacing: 0.01em; gap: 7px; }
+.sd-iog .sd-io svg { color: var(--accent); flex: none; }
+.sd-iog .sd-io:hover { background: var(--surface2); }
+.sd-iog .sd-io + .sd-io { position: relative; margin-left: 4px; }
+.sd-iog .sd-io + .sd-io::before { content: ""; position: absolute; left: -3px; top: 9px; bottom: 9px; width: 1px; background: var(--line); }
+.sd-s .sd-ca { border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
+@media (max-width: 380px) { .sd-iog .sd-io span { display: none; } .sd-iog .sd-io { padding: 0 12px; } }
 @media (prefers-reduced-motion: reduce) { .sd, .sd-ov { transition: none; } .pi { animation: none !important; } }
 </style>
 
@@ -543,7 +567,7 @@ html:has(body.side-open) { overflow: hidden !important; }
             <button type="button" data-add="tasks" aria-label="Tasks" title="Tasks"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.5l3 3 5-6"/></svg></button>
                   <button type="button" data-add="clock" aria-label="Clock" title="Clock"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button>
     </div>
-    <div class="sd-s"><button type="button" class="sd-ca" id="side-ca">Collapse all</button></div>
+    <div class="sd-s"><div class="sd-iog"><button type="button" class="sd-io" data-io="export" aria-label="Export config" title="Export config"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4M5 14v5h14v-5"/></svg><span>Export</span></button><button type="button" class="sd-io" data-io="import" aria-label="Import config" title="Import config"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M8 11l4 4 4-4M5 14v5h14v-5"/></svg><span>Import</span></button></div><button type="button" class="sd-ca" id="side-ca">Collapse all</button></div>
         <div class="sd-l" id="side-list"></div>
     <div class="sd-f" id="side-foot"></div>
   </aside>
@@ -1037,7 +1061,88 @@ html:has(body.side-open) { overflow: hidden !important; }
     var nb = $('#side-new'); if (nb) nb.hidden = !sideNew;
     var pb = $('#side-plus'); if (pb) pb.setAttribute('aria-expanded', String(sideNew));
   }
-  function toggleSide(o) {
+  /* ---------- import / export config ---------- */
+    function ioClose() { var o = $('#io-ov'); if (o) o.remove(); }
+    function ioImport(text) {
+      var d, list, n = 0, last = null;
+      try { d = JSON.parse(text); } catch (err) { tkToast('That is not a valid config'); return false; }
+      list = Array.isArray(d) ? d : (d && d.widgets);
+      if (!Array.isArray(list) || !list.length) { tkToast('No widgets found'); return false; }
+      list.forEach(function (x) {
+        if (!x || typeof x !== 'object' || ['text', 'count', 'photo', 'tasks', 'clock'].indexOf(x.type) < 0) return;
+        if (x.type === 'count' && (!x.units || typeof x.units !== 'object')) return;
+        x.id = nid++; x.appWidgetId = 0;
+        if (x.type === 'photo') { x.photos = []; x.idx = 0; x.last = Date.now(); }
+        if (x.type === 'tasks') { if (!Array.isArray(x.items)) x.items = []; tkNorm(x); }
+        S.w.push(x); last = x; n++;
+        if (native) { try { WB.saveWidget(x).catch(function () { }); } catch (err) { } }
+      });
+      if (!n) { tkToast('No usable widgets found'); return false; }
+      S.sel = last.id; S.tab = 'content'; S.dd = false; S.cp = null; S.dt = false;
+      renderWidgets(); renderPanel(); renderSide();
+      tkToast('Imported ' + n + ' widget' + (n === 1 ? '' : 's'));
+      return true;
+    }
+    function ioOpen(mode) {
+      ioClose();
+      var exp = mode === 'export', ov = document.createElement('div'), txt = '';
+      if (exp) {
+        txt = JSON.stringify({
+          app: 'countdown-widgets', v: 1,
+          widgets: S.w.map(function (w) {
+            var c = JSON.parse(JSON.stringify(w));
+            c.appWidgetId = 0;
+            if (c.photos) c.photos = [];
+            return c;
+          })
+        }, null, 2);
+      }
+      ov.id = 'io-ov'; ov.className = 'io-ov';
+      ov.innerHTML = '<div class="io-c" role="dialog" aria-label="' + (exp ? 'Export config' : 'Import config') + '">' +
+        '<div class="io-h"><b>' + (exp ? 'Export config' : 'Import config') + '</b><button type="button" class="io-x" data-ioa="close" aria-label="Close">×</button></div>' +
+        '<p class="io-p">' + (exp ? 'Copy this text or save it as a file. Photos are not included.' : 'Paste a saved config or choose a file. Widgets are added to your list.') + '</p>' +
+        '<textarea id="io-t" spellcheck="false"' + (exp ? ' readonly' : ' placeholder="Paste config here"') + '></textarea>' +
+        '<div class="io-f">' + (exp
+          ? '<button type="button" class="ghost" data-ioa="copy">Copy</button><button type="button" class="ghost" data-ioa="save">Save file</button>'
+          : '<button type="button" class="ghost" data-ioa="pick">Choose file</button><button type="button" class="pk-ok io-ok" data-ioa="go">Import</button>') +
+        '</div><input type="file" id="io-file" accept=".json,application/json,text/plain" hidden></div>';
+      var ta = ov.querySelector('#io-t'); ta.value = txt;
+      ov.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (e.target === ov) { ioClose(); return; }
+        var b = e.target.closest ? e.target.closest('button') : null, a = b && b.dataset.ioa;
+        if (!a) return;
+        if (a === 'close') { ioClose(); }
+        else if (a === 'copy') {
+          ta.select();
+          var ok = false;
+          try { ok = document.execCommand('copy'); } catch (err) { }
+          if (!ok && navigator.clipboard) { try { navigator.clipboard.writeText(ta.value).catch(function () { }); ok = true; } catch (err) { } }
+          tkToast(ok ? 'Copied' : 'Select the text and copy it');
+        }
+        else if (a === 'save') {
+          try {
+            var bl = new Blob([ta.value], { type: 'application/json' }), u = URL.createObjectURL(bl), l = document.createElement('a');
+            l.href = u; l.download = 'widgets-config.json';
+            document.body.appendChild(l); l.click(); l.remove();
+            setTimeout(function () { URL.revokeObjectURL(u); }, 2000);
+          } catch (err) { tkToast('Could not save, use Copy instead'); }
+        }
+        else if (a === 'pick') { var fi = ov.querySelector('#io-file'); if (fi) fi.click(); }
+        else if (a === 'go') { if (ioImport(ta.value)) ioClose(); }
+      });
+      ov.addEventListener('change', function (e) {
+        var t = e.target;
+        if (t.id !== 'io-file' || !t.files || !t.files[0]) return;
+        var r = new FileReader();
+        r.onload = function () { ta.value = String(r.result || ''); };
+        r.onerror = function () { tkToast('Could not read the file'); };
+        r.readAsText(t.files[0]);
+        t.value = '';
+      });
+      document.body.appendChild(ov);
+    }
+    function toggleSide(o) {
     var s = $('#side'), v = $('#side-ov'); if (!s || !v) return;
     s.classList.toggle('open', o); v.classList.toggle('open', o);
     document.body.classList.toggle('side-open', o);
@@ -1737,7 +1842,8 @@ html:has(body.side-open) { overflow: hidden !important; }
           return;
         }
         if (b.dataset.pm) { var pw1 = cur(); closePM(); if (pw1 && pw1.type === 'photo') photoAct(pw1, b.dataset.pm); return; }
-    if (b.dataset.side) { toggleSide(b.dataset.side === 'open'); return; }
+    if (b.dataset.io) { ioOpen(b.dataset.io); return; }
+        if (b.dataset.side) { toggleSide(b.dataset.side === 'open'); return; }
     if (b.dataset.newtoggle) { sideNew = !sideNew; renderSide(); return; }
     if (b.dataset.pick) { S.sel = Number(b.dataset.pick); S.dd = false; S.cp = null; S.dt = false; renderWidgets(); renderPanel(); toggleSide(false); return; }
     if (b.dataset.del) {
